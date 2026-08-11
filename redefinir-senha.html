@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <title>Redefinir Senha</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="container">
+        <form onsubmit="return false;">
+            <h1>Nova Senha</h1>
+
+            <div class="input-box">
+                <input placeholder="Nova senha" type="password" id="novaSenha">
+                <i class="bx bxs-lock-alt"></i>
+            </div>
+
+            <div class="input-box">
+                <input placeholder="Confirmar nova senha" type="password" id="confirmarSenha">
+                <i class="bx bxs-lock-alt"></i>
+            </div>
+
+            <p id="mensagem" style="text-align: center; margin-top: -10px;"></p>
+
+            <button type="submit" class="login" onclick="redefinirSenha()">Salvar nova senha</button>
+
+            <div class="register-link">
+                <p><a href="index.html">Voltar para o login</a></p>
+            </div>
+
+        </form>
+    </main>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+
+        async function redefinirSenha() {
+            const novaSenha = document.getElementById('novaSenha').value;
+            const confirmarSenha = document.getElementById('confirmarSenha').value;
+            const mensagem = document.getElementById('mensagem');
+
+            if (!novaSenha || !confirmarSenha) {
+                mensagem.textContent = 'Preencha os dois campos.';
+                return;
+            }
+
+            if (novaSenha !== confirmarSenha) {
+                mensagem.textContent = 'As senhas não coincidem.';
+                return;
+            }
+
+            if (!token) {
+                mensagem.textContent = 'Link inválido ou incompleto.';
+                return;
+            }
+
+            try {
+                const resposta = await fetch('http://localhost:3000/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, novaSenha })
+                });
+
+                const dados = await resposta.json();
+
+                if (!resposta.ok) {
+                    mensagem.textContent = dados.erro;
+                    return;
+                }
+
+                mensagem.textContent = dados.mensagem + ' Redirecionando...';
+
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
+
+            } catch (erro) {
+                mensagem.textContent = 'Erro ao conectar com o servidor.';
+            }
+        }
+    </script>
+
+</body>
+</html>
