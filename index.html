@@ -28,7 +28,7 @@
                 <a href="#" onclick="esqueciSenha()">Esqueci a senha</a>
             </div>
 
-            <p id="mensagem" style="text-align: center;"></p>
+             <p id="mensagem" style="text-align: center; margin-top: 30px;"></p>
 
             <button type="submit" class="login" onclick="fazerLogin()">Login</button>
 
@@ -65,10 +65,12 @@
                     return;
                 }
 
+                // Guarda o token no navegador. Ele fica salvo mesmo se fechar a aba.
+                localStorage.setItem('token', dados.token);
+
                 mensagem.textContent = `Bem-vindo, ${dados.nome}!`;
 
-                // Aqui, no futuro, redirecionamos para a tela principal do sistema
-                // window.location.href = 'home.html';
+                window.location.href = 'home.html';
 
             } catch (erro) {
                 mensagem.textContent = 'Erro ao conectar com o servidor.';

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <title>Home</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Começa escondido para não piscar o conteúdo antes de validar o token -->
+    <main class="container" id="conteudo" style="display: none;">
+        <h1>Home</h1>
+
+        <p id="saudacao" style="text-align: center; margin-top: 20px; font-size: 18px;"></p>
+        <p id="email" style="text-align: center; margin-top: 10px; font-size: 14px;"></p>
+
+        <button class="login" onclick="sair()">Sair</button>
+    </main>
+
+    <script>
+        // Roda assim que a página abre.
+        async function carregarPerfil() {
+            const token = localStorage.getItem('token');
+
+            // Sem token nem tenta: manda pro login.
+            if (!token) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            try {
+                const resposta = await fetch('http://localhost:3000/perfil', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                // Token inválido ou expirado: limpa e volta pro login.
+                if (!resposta.ok) {
+                    localStorage.removeItem('token');
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                const dados = await resposta.json();
+
+                document.getElementById('saudacao').textContent = `Olá, ${dados.usuario.nome}!`;
+                document.getElementById('email').textContent = dados.usuario.email;
+                document.getElementById('conteudo').style.display = 'block';
+
+            } catch (erro) {
+                alert('Erro ao conectar com o servidor.');
+            }
+        }
+
+        function sair() {
+            localStorage.removeItem('token');
+            window.location.href = 'index.html';
+        }
+
+        carregarPerfil();
+    </script>
+
+</body>
+</html>

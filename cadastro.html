@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <title>Cadastro</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="container">
+        <form onsubmit="return false;">
+            <h1>Cadastro</h1>
+
+            <div class="input-box">
+                <input placeholder="Nome" type="text" id="nome">
+                <i class="bx bxs-user"></i>
+            </div>
+
+            <div class="input-box">
+                <input placeholder="E-mail" type="email" id="email">
+                <i class="bx bxs-envelope"></i>
+            </div>
+
+            <div class="input-box">
+                <input placeholder="Senha" type="password" id="senha">
+                <i class="bx bxs-lock-alt"></i>
+            </div>
+
+            <div class="input-box">
+                <input placeholder="Confirmar senha" type="password" id="confirmarSenha">
+                <i class="bx bxs-lock-alt"></i>
+            </div>
+
+            <p id="mensagem" style="text-align: center; margin-top: 15px;"></p>
+
+            <button type="submit" class="login" onclick="cadastrar()">Cadastrar</button>
+
+            <div class="register-link">
+                <p>Já tem uma conta? <a href="index.html">Faça login</a></p>
+            </div>
+
+        </form>
+    </main>
+
+    <script>
+        async function cadastrar() {
+            const nome = document.getElementById('nome').value;
+            const email = document.getElementById('email').value;
+            const senha = document.getElementById('senha').value;
+            const confirmarSenha = document.getElementById('confirmarSenha').value;
+            const mensagem = document.getElementById('mensagem');
+
+            if (!nome || !email || !senha || !confirmarSenha) {
+                mensagem.textContent = 'Preencha todos os campos.';
+                return;
+            }
+
+            if (senha !== confirmarSenha) {
+                mensagem.textContent = 'As senhas não coincidem.';
+                return;
+            }
+
+            try {
+                const resposta = await fetch('http://localhost:3000/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome, email, senha })
+                });
+
+                const dados = await resposta.json();
+
+                if (!resposta.ok) {
+                    mensagem.textContent = dados.erro;
+                    return;
+                }
+
+                mensagem.textContent = 'Cadastro realizado! Redirecionando...';
+
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
+
+            } catch (erro) {
+                mensagem.textContent = 'Erro ao conectar com o servidor.';
+            }
+        }
+    </script>
+
+</body>
+</html>

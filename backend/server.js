@@ -1,5 +1,9 @@
 require('dotenv').config();
 
+const cors = require('cors');
+
+const jwt = require('jsonwebtoken');
+
 const express = require('express');
 const db = require('./database');
 const bcrypt = require('bcrypt');
@@ -8,6 +12,9 @@ const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = 3000;
+
+app.use(cors());
+
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -22,6 +29,29 @@ app.use(express.json());
 app.get('/', (req, res) => {
   res.send('Teste');
 });
+
+// Middleware: roda ANTES da rota e só deixa passar quem tem token válido.
+function verificarToken(req, res, next) {
+  // O front manda o header: Authorization: Bearer <token>
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ erro: 'Token não enviado.' });
+  }
+
+  try {
+    // Confere a assinatura e a validade (expiresIn). Se algo estiver errado, joga erro.
+    const dadosDoToken = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Guarda os dados do token no req para a rota usar depois.
+    req.usuario = dadosDoToken;
+    next();
+
+  } catch (erro) {
+    return res.status(401).json({ erro: 'Token inválido ou expirado.' });
+  }
+}
 
 app.post('/register', async (req, res) => {
   const { nome, email, senha } = req.body;
@@ -59,11 +89,31 @@ app.post('/login', async (req, res) => {
 
   const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
 
-  if (!senhaCorreta) {
+ if (!senhaCorreta) {
     return res.status(401).json({ erro: 'Usuário ou senha inválidos.' });
   }
 
-  res.json({ mensagem: 'Login realizado com sucesso!', nome: usuario.nome });
+
+  const token = jwt.sign(
+    { id: usuario.id, nome: usuario.nome },
+    process.env.JWT_SECRET,
+    { expiresIn: '2h' }
+  );
+
+  res.json({ mensagem: 'Login realizado com sucesso!', nome: usuario.nome, token });
+});
+
+// Rota protegida: o verificarToken entra no meio do caminho.
+app.get('/perfil', verificarToken, (req, res) => {
+  // req.usuario veio do token (id e nome que colocamos no jwt.sign do /login).
+  const stmt = db.prepare('SELECT id, nome, email FROM usuarios WHERE id = ?');
+  const usuario = stmt.get(req.usuario.id);
+
+  if (!usuario) {
+    return res.status(404).json({ erro: 'Usuário não encontrado.' });
+  }
+
+  res.json({ usuario });
 });
 
 app.post('/forgot-password', async (req, res) => {
