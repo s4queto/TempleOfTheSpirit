@@ -11,6 +11,7 @@ const db = require('./database');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const { gerarTreino } = require('./gerador');
 
 if (!process.env.JWT_SECRET) {
   console.error('ERRO: JWT_SECRET não definido. Copie backend/.env.example para backend/.env e preencha os valores.');
@@ -229,6 +230,131 @@ app.delete('/tarefas/:id', verificarToken, (req, res) => {
   }
 
   res.json({ mensagem: 'Tarefa excluída!' });
+});
+
+function carregarCatalogo() {
+  return {
+    agrupamentos: db.prepare('SELECT slug, nome, grupo, dano, explicacao FROM agrupamentos').all(),
+    exercicios: db.prepare(`
+      SELECT e.id, e.nome, e.equipamento, e.genero, e.enfase, e.observacao, a.slug AS agrupamento
+      FROM exercicios e
+      JOIN agrupamentos a ON a.id = e.agrupamento_id
+    `).all(),
+  };
+}
+
+function montarFicha(treinoId, usuarioId) {
+  const treino = db.prepare(
+    'SELECT * FROM treinos WHERE id = ? AND usuario_id = ?'
+  ).get(treinoId, usuarioId);
+
+  if (!treino) return null;
+
+  const sessoes = db.prepare(
+    'SELECT * FROM treino_sessoes WHERE treino_id = ? ORDER BY ordem'
+  ).all(treino.id);
+
+  const exercicios = db.prepare(`
+    SELECT te.sessao_id, te.ordem, te.series, te.reps, te.rir,
+           e.id AS exercicio_id, e.nome, e.equipamento, e.enfase, e.observacao,
+           a.slug AS agrupamento, a.nome AS agrupamento_nome, a.grupo, a.explicacao
+    FROM treino_exercicios te
+    JOIN exercicios e ON e.id = te.exercicio_id
+    JOIN agrupamentos a ON a.id = e.agrupamento_id
+    WHERE te.sessao_id = ?
+    ORDER BY te.ordem
+  `);
+
+  return {
+    ...treino,
+    sessoes: sessoes.map((s) => ({ ...s, exercicios: exercicios.all(s.id) })),
+  };
+}
+
+app.get('/exercicios', verificarToken, (req, res) => {
+  const catalogo = carregarCatalogo();
+  res.json(catalogo);
+});
+
+app.post('/treinos', verificarToken, (req, res) => {
+  const { nivel, genero, dias, nome } = req.body;
+
+  let gerado;
+  try {
+    gerado = gerarTreino({ nivel, genero, dias: Number(dias) }, carregarCatalogo());
+  } catch (erro) {
+    return res.status(400).json({ erro: erro.message });
+  }
+
+  const inserirTreino = db.prepare(`
+    INSERT INTO treinos (usuario_id, nome, nivel, genero, divisao)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+  const inserirSessao = db.prepare(
+    'INSERT INTO treino_sessoes (treino_id, nome, ordem) VALUES (?, ?, ?)'
+  );
+  const inserirExercicio = db.prepare(`
+    INSERT INTO treino_exercicios (sessao_id, exercicio_id, ordem, series, reps, rir)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+
+  const salvar = db.transaction(() => {
+    const treino = inserirTreino.run(
+      req.usuario.id,
+      nome || `${gerado.nomeDivisao} — ${dias} dias`,
+      nivel,
+      genero,
+      gerado.divisao
+    );
+
+    for (const sessao of gerado.sessoes) {
+      const salva = inserirSessao.run(treino.lastInsertRowid, sessao.nome, sessao.ordem);
+
+      for (const e of sessao.exercicios) {
+        inserirExercicio.run(salva.lastInsertRowid, e.exercicio_id, e.ordem, e.series, e.reps, e.rir);
+      }
+    }
+
+    return treino.lastInsertRowid;
+  });
+
+  const id = salvar();
+
+  res.status(201).json({ mensagem: 'Treino gerado!', treino: montarFicha(id, req.usuario.id) });
+});
+
+app.get('/treinos', verificarToken, (req, res) => {
+  const treinos = db.prepare(`
+    SELECT t.*, COUNT(s.id) AS sessoes
+    FROM treinos t LEFT JOIN treino_sessoes s ON s.treino_id = t.id
+    WHERE t.usuario_id = ?
+    GROUP BY t.id
+    ORDER BY t.id DESC
+  `).all(req.usuario.id);
+
+  res.json({ treinos });
+});
+
+app.get('/treinos/:id', verificarToken, (req, res) => {
+  const ficha = montarFicha(req.params.id, req.usuario.id);
+
+  if (!ficha) {
+    return res.status(404).json({ erro: 'Treino não encontrado.' });
+  }
+
+  res.json({ treino: ficha });
+});
+
+app.delete('/treinos/:id', verificarToken, (req, res) => {
+  const resultado = db.prepare(
+    'DELETE FROM treinos WHERE id = ? AND usuario_id = ?'
+  ).run(req.params.id, req.usuario.id);
+
+  if (resultado.changes === 0) {
+    return res.status(404).json({ erro: 'Treino não encontrado.' });
+  }
+
+  res.json({ mensagem: 'Treino excluído!' });
 });
 
 app.post('/forgot-password', async (req, res) => {
