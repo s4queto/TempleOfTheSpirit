@@ -120,3 +120,90 @@ color: #ffffffb6;
 .reister-link a:hover{
     text-decoration: underline;
 }
+
+/* ----- Área logada ----- */
+
+.container-largo{
+    width: 520px;
+}
+
+.topo{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    padding-bottom: 15px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, .2);
+}
+
+.topo a{
+    text-decoration: none;
+    color: #fff;
+    margin-left: 15px;
+}
+
+.topo a:hover{
+    text-decoration: underline;
+}
+
+.lista{
+    list-style: none;
+    margin-top: 20px;
+}
+
+.lista li{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 15px;
+    margin-bottom: 10px;
+    border: 2px solid rgba(255, 255, 255, .2);
+    border-radius: 10px;
+}
+
+.lista li.concluida .texto{
+    opacity: .5;
+    text-decoration: line-through;
+}
+
+.lista li.vazio{
+    justify-content: center;
+    border-style: dashed;
+    opacity: .7;
+    font-size: 14px;
+}
+
+.lista .texto{
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    /* Impede que um título longo sem espaços estoure a largura do card */
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.lista .texto small{
+    font-size: 13px;
+    opacity: .8;
+    margin-top: 3px;
+}
+
+.lista input[type="checkbox"]{
+    accent-color: #fff;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.lista .bx-trash{
+    font-size: 20px;
+    cursor: pointer;
+    opacity: .7;
+    flex-shrink: 0;
+}
+
+.lista .bx-trash:hover{
+    opacity: 1;
+}

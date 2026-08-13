@@ -1,4 +1,8 @@
-require('dotenv').config();
+const path = require('path');
+
+// Sem o path explícito, o dotenv procuraria o .env na pasta de onde o comando
+// foi executado, e iniciar o servidor de fora de backend/ carregaria zero variáveis.
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const cors = require('cors');
 
@@ -9,6 +13,12 @@ const db = require('./database');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+
+// Falha na largada em vez de só quebrar quando alguém tentar logar.
+if (!process.env.JWT_SECRET) {
+  console.error('ERRO: JWT_SECRET não definido. Copie backend/.env.example para backend/.env e preencha os valores.');
+  process.exit(1);
+}
 
 const app = express();
 const PORT = 3000;
@@ -171,6 +181,76 @@ app.put('/alterar-senha', verificarToken, async (req, res) => {
   update.run(senhaCriptografada, req.usuario.id);
 
   res.json({ mensagem: 'Senha alterada com sucesso!' });
+});
+
+// ----- Tarefas -----
+// Regra de ouro destas rotas: TODA consulta filtra por usuario_id vindo do token.
+// Sem isso, trocar o número na URL daria acesso às tarefas de outra pessoa (IDOR).
+
+app.get('/tarefas', verificarToken, (req, res) => {
+  const stmt = db.prepare(
+    'SELECT * FROM tarefas WHERE usuario_id = ? ORDER BY concluida, id DESC'
+  );
+  const tarefas = stmt.all(req.usuario.id);
+
+  res.json({ tarefas });
+});
+
+app.post('/tarefas', verificarToken, (req, res) => {
+  const { titulo, descricao } = req.body;
+
+  if (!titulo) {
+    return res.status(400).json({ erro: 'Informe o título da tarefa.' });
+  }
+
+  const stmt = db.prepare(
+    'INSERT INTO tarefas (usuario_id, titulo, descricao) VALUES (?, ?, ?)'
+  );
+  const resultado = stmt.run(req.usuario.id, titulo, descricao || null);
+
+  const criada = db.prepare('SELECT * FROM tarefas WHERE id = ?').get(resultado.lastInsertRowid);
+
+  res.status(201).json({ mensagem: 'Tarefa criada!', tarefa: criada });
+});
+
+app.put('/tarefas/:id', verificarToken, (req, res) => {
+  const { titulo, descricao, concluida } = req.body;
+
+  if (!titulo) {
+    return res.status(400).json({ erro: 'Informe o título da tarefa.' });
+  }
+
+  // O AND usuario_id = ? é a trava: se a tarefa for de outra pessoa,
+  // nenhuma linha é afetada e o resultado é o mesmo de "não existe".
+  const stmt = db.prepare(
+    'UPDATE tarefas SET titulo = ?, descricao = ?, concluida = ? WHERE id = ? AND usuario_id = ?'
+  );
+  const resultado = stmt.run(
+    titulo,
+    descricao || null,
+    concluida ? 1 : 0,
+    req.params.id,
+    req.usuario.id
+  );
+
+  if (resultado.changes === 0) {
+    return res.status(404).json({ erro: 'Tarefa não encontrada.' });
+  }
+
+  const atualizada = db.prepare('SELECT * FROM tarefas WHERE id = ?').get(req.params.id);
+
+  res.json({ mensagem: 'Tarefa atualizada!', tarefa: atualizada });
+});
+
+app.delete('/tarefas/:id', verificarToken, (req, res) => {
+  const stmt = db.prepare('DELETE FROM tarefas WHERE id = ? AND usuario_id = ?');
+  const resultado = stmt.run(req.params.id, req.usuario.id);
+
+  if (resultado.changes === 0) {
+    return res.status(404).json({ erro: 'Tarefa não encontrada.' });
+  }
+
+  res.json({ mensagem: 'Tarefa excluída!' });
 });
 
 app.post('/forgot-password', async (req, res) => {

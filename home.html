@@ -4,174 +4,154 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-    <title>Home</title>
+    <title>Minhas tarefas</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Começa escondido para não piscar o conteúdo antes de validar o token -->
-    <main class="container" id="conteudo" style="display: none;">
-        <h1>Meu perfil</h1>
+    <main class="container container-largo" id="conteudo" style="display: none;">
 
-        <p id="saudacao" style="text-align: center; margin-top: 15px;"></p>
+        <nav class="topo">
+            <span id="saudacao"></span>
+            <span>
+                <a href="perfil.html">Perfil</a>
+                <a href="#" onclick="sair()">Sair</a>
+            </span>
+        </nav>
 
-        <form onsubmit="return false;">
-            <div class="input-box">
-                <input placeholder="Nome" type="text" id="nome">
-                <i class="bx bxs-user"></i>
-            </div>
-
-            <div class="input-box">
-                <input placeholder="E-mail" type="email" id="email">
-                <i class="bx bxs-envelope"></i>
-            </div>
-
-            <button type="submit" class="login" onclick="salvarPerfil()" style="margin-top: 0;">Salvar alterações</button>
-        </form>
-
-        <hr style="margin: 30px 0; border: none; border-top: 1px solid rgba(255, 255, 255, .2);">
-
-        <h1 style="font-size: 22px;">Alterar senha</h1>
+        <h1>Minhas tarefas</h1>
 
         <form onsubmit="return false;">
             <div class="input-box">
-                <input placeholder="Senha atual" type="password" id="senhaAtual">
-                <i class="bx bxs-lock-alt"></i>
+                <input placeholder="Nova tarefa" type="text" id="titulo" maxlength="100">
+                <i class="bx bxs-edit"></i>
             </div>
 
             <div class="input-box">
-                <input placeholder="Nova senha" type="password" id="novaSenha">
-                <i class="bx bxs-lock-alt"></i>
+                <input placeholder="Descrição (opcional)" type="text" id="descricao" maxlength="200">
+                <i class="bx bxs-notepad"></i>
             </div>
 
-            <button type="submit" class="login" onclick="alterarSenha()" style="margin-top: 0;">Alterar senha</button>
+            <button type="submit" class="login" onclick="criarTarefa()" style="margin-top: 0;">Adicionar</button>
         </form>
 
-        <p id="mensagem" style="text-align: center; margin-top: 20px;"></p>
+        <p id="mensagem" style="text-align: center; margin-top: 15px;"></p>
 
-        <div class="register-link">
-            <p><a href="#" onclick="sair()">Sair da conta</a></p>
-        </div>
+        <ul class="lista" id="lista"></ul>
+
+        <p id="contador" style="text-align: center; font-size: 14px; opacity: .8;"></p>
     </main>
 
+    <script src="auth.js"></script>
     <script>
-        // Toda chamada protegida passa por aqui: assim o token e o tratamento
-        // de sessão expirada ficam num lugar só, em vez de repetidos em cada função.
-        async function chamarApi(rota, opcoes = {}) {
-            const token = localStorage.getItem('token');
-
-            if (!token) {
-                window.location.href = 'index.html';
-                return;
-            }
-
-            const resposta = await fetch(`http://localhost:3000${rota}`, {
-                ...opcoes,
-                headers: {
-                    ...opcoes.headers,
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            // 401 = o backend recusou o token (inválido ou expirado).
-            if (resposta.status === 401) {
-                localStorage.removeItem('token');
-                alert('Sua sessão expirou. Faça login novamente.');
-                window.location.href = 'index.html';
-                return;
-            }
-
-            return resposta;
-        }
-
-        async function carregarPerfil() {
+        async function iniciar() {
             try {
                 const resposta = await chamarApi('/perfil');
                 if (!resposta) return;
 
                 const dados = await resposta.json();
-
                 document.getElementById('saudacao').textContent = `Olá, ${dados.usuario.nome}!`;
-                document.getElementById('nome').value = dados.usuario.nome;
-                document.getElementById('email').value = dados.usuario.email;
                 document.getElementById('conteudo').style.display = 'block';
+
+                await carregarTarefas();
 
             } catch (erro) {
                 alert('Erro ao conectar com o servidor.');
             }
         }
 
-        async function salvarPerfil() {
-            const nome = document.getElementById('nome').value;
-            const email = document.getElementById('email').value;
-            const mensagem = document.getElementById('mensagem');
+        async function carregarTarefas() {
+            const resposta = await chamarApi('/tarefas');
+            if (!resposta) return;
 
-            if (!nome || !email) {
-                mensagem.textContent = 'Preencha nome e e-mail.';
+            const { tarefas } = await resposta.json();
+            const lista = document.getElementById('lista');
+
+            if (tarefas.length === 0) {
+                lista.innerHTML = '<li class="vazio">Nenhuma tarefa ainda. Adicione a primeira!</li>';
+                document.getElementById('contador').textContent = '';
                 return;
             }
 
-            try {
-                const resposta = await chamarApi('/perfil', {
-                    method: 'PUT',
-                    body: JSON.stringify({ nome, email })
-                });
-                if (!resposta) return;
+            // escapar() protege contra XSS: o título vem do usuário e vai para innerHTML.
+            lista.innerHTML = tarefas.map(t => `
+                <li class="${t.concluida ? 'concluida' : ''}">
+                    <input type="checkbox" ${t.concluida ? 'checked' : ''}
+                           onchange="alternar(${t.id}, this.checked)">
+                    <div class="texto">
+                        <strong>${escapar(t.titulo)}</strong>
+                        ${t.descricao ? `<small>${escapar(t.descricao)}</small>` : ''}
+                    </div>
+                    <i class="bx bx-trash" onclick="excluir(${t.id})" title="Excluir"></i>
+                </li>
+            `).join('');
 
-                const dados = await resposta.json();
-
-                if (!resposta.ok) {
-                    mensagem.textContent = dados.erro;
-                    return;
-                }
-
-                document.getElementById('saudacao').textContent = `Olá, ${dados.usuario.nome}!`;
-                mensagem.textContent = dados.mensagem;
-
-            } catch (erro) {
-                mensagem.textContent = 'Erro ao conectar com o servidor.';
-            }
+            const pendentes = tarefas.filter(t => !t.concluida).length;
+            document.getElementById('contador').textContent =
+                `${pendentes} pendente(s) de ${tarefas.length}`;
         }
 
-        async function alterarSenha() {
-            const senhaAtual = document.getElementById('senhaAtual').value;
-            const novaSenha = document.getElementById('novaSenha').value;
+        async function criarTarefa() {
+            const titulo = document.getElementById('titulo').value.trim();
+            const descricao = document.getElementById('descricao').value.trim();
             const mensagem = document.getElementById('mensagem');
 
-            if (!senhaAtual || !novaSenha) {
-                mensagem.textContent = 'Informe a senha atual e a nova senha.';
+            if (!titulo) {
+                mensagem.textContent = 'Informe o título da tarefa.';
                 return;
             }
 
-            try {
-                const resposta = await chamarApi('/alterar-senha', {
-                    method: 'PUT',
-                    body: JSON.stringify({ senhaAtual, novaSenha })
-                });
-                if (!resposta) return;
+            const resposta = await chamarApi('/tarefas', {
+                method: 'POST',
+                body: JSON.stringify({ titulo, descricao })
+            });
+            if (!resposta) return;
 
-                const dados = await resposta.json();
+            const dados = await resposta.json();
 
-                if (!resposta.ok) {
-                    mensagem.textContent = dados.erro;
-                    return;
-                }
-
-                mensagem.textContent = dados.mensagem;
-                document.getElementById('senhaAtual').value = '';
-                document.getElementById('novaSenha').value = '';
-
-            } catch (erro) {
-                mensagem.textContent = 'Erro ao conectar com o servidor.';
+            if (!resposta.ok) {
+                mensagem.textContent = dados.erro;
+                return;
             }
+
+            document.getElementById('titulo').value = '';
+            document.getElementById('descricao').value = '';
+            mensagem.textContent = '';
+
+            await carregarTarefas();
         }
 
-        function sair() {
-            localStorage.removeItem('token');
-            window.location.href = 'index.html';
+        async function alternar(id, concluida) {
+            // O PUT exige o título, então buscamos a tarefa atual antes de mandar.
+            const resposta = await chamarApi('/tarefas');
+            if (!resposta) return;
+
+            const { tarefas } = await resposta.json();
+            const tarefa = tarefas.find(t => t.id === id);
+            if (!tarefa) return;
+
+            await chamarApi(`/tarefas/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    titulo: tarefa.titulo,
+                    descricao: tarefa.descricao,
+                    concluida
+                })
+            });
+
+            await carregarTarefas();
         }
 
-        carregarPerfil();
+        async function excluir(id) {
+            if (!confirm('Excluir esta tarefa?')) return;
+
+            const resposta = await chamarApi(`/tarefas/${id}`, { method: 'DELETE' });
+            if (!resposta) return;
+
+            await carregarTarefas();
+        }
+
+        iniciar();
     </script>
 
 </body>
