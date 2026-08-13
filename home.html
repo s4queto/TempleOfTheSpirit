@@ -10,45 +10,159 @@
 <body>
     <!-- Começa escondido para não piscar o conteúdo antes de validar o token -->
     <main class="container" id="conteudo" style="display: none;">
-        <h1>Home</h1>
+        <h1>Meu perfil</h1>
 
-        <p id="saudacao" style="text-align: center; margin-top: 20px; font-size: 18px;"></p>
-        <p id="email" style="text-align: center; margin-top: 10px; font-size: 14px;"></p>
+        <p id="saudacao" style="text-align: center; margin-top: 15px;"></p>
 
-        <button class="login" onclick="sair()">Sair</button>
+        <form onsubmit="return false;">
+            <div class="input-box">
+                <input placeholder="Nome" type="text" id="nome">
+                <i class="bx bxs-user"></i>
+            </div>
+
+            <div class="input-box">
+                <input placeholder="E-mail" type="email" id="email">
+                <i class="bx bxs-envelope"></i>
+            </div>
+
+            <button type="submit" class="login" onclick="salvarPerfil()" style="margin-top: 0;">Salvar alterações</button>
+        </form>
+
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid rgba(255, 255, 255, .2);">
+
+        <h1 style="font-size: 22px;">Alterar senha</h1>
+
+        <form onsubmit="return false;">
+            <div class="input-box">
+                <input placeholder="Senha atual" type="password" id="senhaAtual">
+                <i class="bx bxs-lock-alt"></i>
+            </div>
+
+            <div class="input-box">
+                <input placeholder="Nova senha" type="password" id="novaSenha">
+                <i class="bx bxs-lock-alt"></i>
+            </div>
+
+            <button type="submit" class="login" onclick="alterarSenha()" style="margin-top: 0;">Alterar senha</button>
+        </form>
+
+        <p id="mensagem" style="text-align: center; margin-top: 20px;"></p>
+
+        <div class="register-link">
+            <p><a href="#" onclick="sair()">Sair da conta</a></p>
+        </div>
     </main>
 
     <script>
-        // Roda assim que a página abre.
-        async function carregarPerfil() {
+        // Toda chamada protegida passa por aqui: assim o token e o tratamento
+        // de sessão expirada ficam num lugar só, em vez de repetidos em cada função.
+        async function chamarApi(rota, opcoes = {}) {
             const token = localStorage.getItem('token');
 
-            // Sem token nem tenta: manda pro login.
             if (!token) {
                 window.location.href = 'index.html';
                 return;
             }
 
-            try {
-                const resposta = await fetch('http://localhost:3000/perfil', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                // Token inválido ou expirado: limpa e volta pro login.
-                if (!resposta.ok) {
-                    localStorage.removeItem('token');
-                    window.location.href = 'index.html';
-                    return;
+            const resposta = await fetch(`http://localhost:3000${rota}`, {
+                ...opcoes,
+                headers: {
+                    ...opcoes.headers,
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 }
+            });
+
+            // 401 = o backend recusou o token (inválido ou expirado).
+            if (resposta.status === 401) {
+                localStorage.removeItem('token');
+                alert('Sua sessão expirou. Faça login novamente.');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            return resposta;
+        }
+
+        async function carregarPerfil() {
+            try {
+                const resposta = await chamarApi('/perfil');
+                if (!resposta) return;
 
                 const dados = await resposta.json();
 
                 document.getElementById('saudacao').textContent = `Olá, ${dados.usuario.nome}!`;
-                document.getElementById('email').textContent = dados.usuario.email;
+                document.getElementById('nome').value = dados.usuario.nome;
+                document.getElementById('email').value = dados.usuario.email;
                 document.getElementById('conteudo').style.display = 'block';
 
             } catch (erro) {
                 alert('Erro ao conectar com o servidor.');
+            }
+        }
+
+        async function salvarPerfil() {
+            const nome = document.getElementById('nome').value;
+            const email = document.getElementById('email').value;
+            const mensagem = document.getElementById('mensagem');
+
+            if (!nome || !email) {
+                mensagem.textContent = 'Preencha nome e e-mail.';
+                return;
+            }
+
+            try {
+                const resposta = await chamarApi('/perfil', {
+                    method: 'PUT',
+                    body: JSON.stringify({ nome, email })
+                });
+                if (!resposta) return;
+
+                const dados = await resposta.json();
+
+                if (!resposta.ok) {
+                    mensagem.textContent = dados.erro;
+                    return;
+                }
+
+                document.getElementById('saudacao').textContent = `Olá, ${dados.usuario.nome}!`;
+                mensagem.textContent = dados.mensagem;
+
+            } catch (erro) {
+                mensagem.textContent = 'Erro ao conectar com o servidor.';
+            }
+        }
+
+        async function alterarSenha() {
+            const senhaAtual = document.getElementById('senhaAtual').value;
+            const novaSenha = document.getElementById('novaSenha').value;
+            const mensagem = document.getElementById('mensagem');
+
+            if (!senhaAtual || !novaSenha) {
+                mensagem.textContent = 'Informe a senha atual e a nova senha.';
+                return;
+            }
+
+            try {
+                const resposta = await chamarApi('/alterar-senha', {
+                    method: 'PUT',
+                    body: JSON.stringify({ senhaAtual, novaSenha })
+                });
+                if (!resposta) return;
+
+                const dados = await resposta.json();
+
+                if (!resposta.ok) {
+                    mensagem.textContent = dados.erro;
+                    return;
+                }
+
+                mensagem.textContent = dados.mensagem;
+                document.getElementById('senhaAtual').value = '';
+                document.getElementById('novaSenha').value = '';
+
+            } catch (erro) {
+                mensagem.textContent = 'Erro ao conectar com o servidor.';
             }
         }
 

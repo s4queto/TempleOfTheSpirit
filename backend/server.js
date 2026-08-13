@@ -116,6 +116,63 @@ app.get('/perfil', verificarToken, (req, res) => {
   res.json({ usuario });
 });
 
+// Atualiza nome e e-mail do usuário logado.
+app.put('/perfil', verificarToken, (req, res) => {
+  const { nome, email } = req.body;
+
+  if (!nome || !email) {
+    return res.status(400).json({ erro: 'Preencha nome e e-mail.' });
+  }
+
+  try {
+    // O WHERE id = ? usa o id do TOKEN, não algo que o front mandou.
+    // É isso que impede alguém de editar o perfil de outra pessoa.
+    const update = db.prepare('UPDATE usuarios SET nome = ?, email = ? WHERE id = ?');
+    update.run(nome, email, req.usuario.id);
+
+    res.json({ mensagem: 'Perfil atualizado com sucesso!', usuario: { nome, email } });
+
+  } catch (erro) {
+    // A coluna email é UNIQUE no banco, então o próprio SQLite barra duplicata.
+    return res.status(400).json({ erro: 'Esse e-mail já está em uso.' });
+  }
+});
+
+// Troca de senha de quem já está logado (diferente do fluxo de "esqueci a senha").
+app.put('/alterar-senha', verificarToken, async (req, res) => {
+  const { senhaAtual, novaSenha } = req.body;
+
+  if (!senhaAtual || !novaSenha) {
+    return res.status(400).json({ erro: 'Informe a senha atual e a nova senha.' });
+  }
+
+  if (novaSenha.length < 6) {
+    return res.status(400).json({ erro: 'A nova senha deve ter no mínimo 6 caracteres.' });
+  }
+
+  const stmt = db.prepare('SELECT * FROM usuarios WHERE id = ?');
+  const usuario = stmt.get(req.usuario.id);
+
+  if (!usuario) {
+    return res.status(404).json({ erro: 'Usuário não encontrado.' });
+  }
+
+  // Ter o token não basta: exigimos a senha atual de novo.
+  // Assim, um token roubado não vira uma conta roubada de vez.
+  const senhaCorreta = await bcrypt.compare(senhaAtual, usuario.senha);
+
+  if (!senhaCorreta) {
+    return res.status(401).json({ erro: 'Senha atual incorreta.' });
+  }
+
+  const senhaCriptografada = await bcrypt.hash(novaSenha, 10);
+
+  const update = db.prepare('UPDATE usuarios SET senha = ? WHERE id = ?');
+  update.run(senhaCriptografada, req.usuario.id);
+
+  res.json({ mensagem: 'Senha alterada com sucesso!' });
+});
+
 app.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
 
