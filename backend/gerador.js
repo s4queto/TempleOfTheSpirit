@@ -1,79 +1,65 @@
 const MUSCULOS = {
-  peito: {
-    agrupamentos: ['peitoral_maior_clavicular', 'peitoral_maior_esternocostal', 'peitoral_maior_abdominal'],
-    min: 2,
-    max: 3,
-  },
-  costas: {
-    agrupamentos: ['latissimo_dorso', 'upperback', 'trapezio', 'eretores_espinha'],
-    min: 2,
-    max: 3,
-  },
-  ombro: {
-    agrupamentos: ['deltoide_lateral', 'deltoide_posterior'],
-    min: 2,
-    max: 2,
-  },
-  biceps: { agrupamentos: ['biceps'], min: 2, max: 2 },
-  triceps: { agrupamentos: ['triceps'], min: 2, max: 2 },
-  quadriceps: { agrupamentos: ['quadriceps'], min: 2, max: 2 },
-  posterior_coxa: { agrupamentos: ['posterior_coxa'], min: 2, max: 2 },
-  gluteo: { agrupamentos: ['gluteo'], min: 1, max: 1 },
-  adutores: { agrupamentos: ['adutores'], min: 1, max: 1 },
-  panturrilha: { agrupamentos: ['panturrilha'], min: 1, max: 1 },
-  core: { agrupamentos: ['reto_abdominal', 'obliquos'], min: 1, max: 1 },
-  antebraco: { agrupamentos: ['flexores_punho', 'extensores_punho'], min: 1, max: 1 },
+  peito: ['peitoral_maior_clavicular', 'peitoral_maior_esternocostal', 'peitoral_maior_abdominal'],
+  costas: ['latissimo_dorso', 'upperback', 'trapezio', 'eretores_espinha'],
+  ombro: ['deltoide_lateral', 'deltoide_posterior'],
+  biceps: ['biceps'],
+  triceps: ['triceps'],
+  quadriceps: ['quadriceps'],
+  posterior_coxa: ['posterior_coxa'],
+  gluteo: ['gluteo'],
+  adutores: ['adutores'],
+  panturrilha: ['panturrilha'],
+  core: ['reto_abdominal', 'obliquos'],
+  antebraco: ['flexores_punho', 'extensores_punho'],
 };
 
-const PERNA = ['quadriceps', 'posterior_coxa', 'gluteo', 'adutores', 'panturrilha'];
-
-const PUSH = ['peito', 'ombro', 'triceps'];
-const PULL = ['costas', 'biceps', 'antebraco'];
-const LEGS = [...PERNA, 'core'];
-const UPPER = ['peito', 'costas', 'ombro', 'biceps', 'triceps', 'antebraco'];
-const LOWER = [...PERNA, 'core'];
+const PUSH = { peito: 3, ombro: 2, triceps: 2 };
+const PULL = { costas: 4, biceps: 2, antebraco: 2 };
+const LEGS = { quadriceps: 2, posterior_coxa: 2, gluteo: 1, adutores: 1, panturrilha: 1, core: 2 };
+const UPPER = { peito: 2, costas: 2, ombro: 2, biceps: 1, triceps: 1 };
+const LOWER = { quadriceps: 2, posterior_coxa: 1, gluteo: 1, adutores: 1, panturrilha: 1, core: 1, antebraco: 1 };
 
 const DIVISOES = {
   3: {
     slug: 'ppl3',
     nome: 'Push / Pull / Legs',
     sessoes: [
-      { nome: 'Push', musculos: PUSH },
-      { nome: 'Pull', musculos: PULL },
-      { nome: 'Legs', musculos: LEGS },
+      { nome: 'Push', volume: PUSH },
+      { nome: 'Pull', volume: PULL },
+      { nome: 'Legs', volume: LEGS },
     ],
   },
   4: {
     slug: 'ul4',
     nome: 'Upper / Lower',
     sessoes: [
-      { nome: 'Upper', musculos: UPPER },
-      { nome: 'Lower', musculos: LOWER },
-      { nome: 'Upper', musculos: UPPER },
-      { nome: 'Lower', musculos: LOWER },
+      { nome: 'Upper', volume: UPPER },
+      { nome: 'Lower', volume: LOWER },
+      { nome: 'Upper', volume: UPPER },
+      { nome: 'Lower', volume: LOWER },
     ],
   },
   5: {
     slug: 'pplul5',
     nome: 'PPLUL',
     sessoes: [
-      { nome: 'Push', musculos: PUSH },
-      { nome: 'Pull', musculos: PULL },
-      { nome: 'Legs', musculos: LEGS },
-      { nome: 'Upper', musculos: UPPER },
-      { nome: 'Lower', musculos: LOWER },
+      { nome: 'Push', volume: PUSH },
+      { nome: 'Pull', volume: PULL },
+      { nome: 'Legs', volume: LEGS },
+      { nome: 'Upper', volume: UPPER },
+      { nome: 'Lower', volume: LOWER },
     ],
   },
   6: {
     slug: 'ppl6',
     nome: 'Push / Pull / Legs x2',
     sessoes: [
-      { nome: 'Push', musculos: PUSH },
-      { nome: 'Pull', musculos: PULL },
-      { nome: 'Legs', musculos: LEGS },
-      { nome: 'Push', musculos: PUSH },
-      { nome: 'Pull', musculos: PULL },
-      { nome: 'Legs', musculos: LEGS },
+      { nome: 'Push', volume: PUSH },
+      { nome: 'Pull', volume: PULL },
+      { nome: 'Legs', volume: LEGS },
+      { nome: 'Push', volume: PUSH },
+      { nome: 'Pull', volume: PULL },
+      { nome: 'Legs', volume: LEGS },
     ],
   },
 };
@@ -99,37 +85,20 @@ function embaralhar(lista) {
   return copia;
 }
 
-function distribuir(musculo, quantidadeDeSessoes) {
-  const { agrupamentos, min, max } = musculo;
-
-  if (quantidadeDeSessoes === 1) {
-    const unica = [...agrupamentos];
-    let i = 0;
-    while (unica.length < min) {
-      unica.push(agrupamentos[i % agrupamentos.length]);
-      i++;
-    }
-    return [unica];
-  }
-
-  const porSessao = Math.min(max, Math.max(min, Math.ceil(agrupamentos.length / quantidadeDeSessoes)));
+function distribuir(agrupamentos, slots) {
   const blocos = [];
+  let i = 0;
 
-  for (let i = 0; i < quantidadeDeSessoes; i++) {
-    blocos.push(agrupamentos.slice(i * porSessao, (i + 1) * porSessao));
-  }
-
-  return blocos.map((bloco, indice) => {
-    const completo = [...bloco];
-    let i = indice;
-
-    while (completo.length < min) {
-      completo.push(agrupamentos[i % agrupamentos.length]);
+  for (const quantidade of slots) {
+    const bloco = [];
+    for (let k = 0; k < quantidade; k++) {
+      bloco.push(agrupamentos[i % agrupamentos.length]);
       i++;
     }
+    blocos.push(bloco);
+  }
 
-    return completo;
-  });
+  return blocos;
 }
 
 function ordenarZigZag(exercicios) {
@@ -194,22 +163,22 @@ function gerarTreino({ nivel, genero, dias }, catalogo) {
 
   const ocorrencias = {};
   divisao.sessoes.forEach((sessao, indice) => {
-    for (const musculo of sessao.musculos) {
+    for (const [musculo, quantidade] of Object.entries(sessao.volume)) {
       if (!ocorrencias[musculo]) ocorrencias[musculo] = [];
-      ocorrencias[musculo].push(indice);
+      ocorrencias[musculo].push({ indice, quantidade });
     }
   });
 
   const planoPorSessao = divisao.sessoes.map(() => []);
 
-  for (const [nome, indices] of Object.entries(ocorrencias)) {
-    const musculo = MUSCULOS[nome];
-    if (!musculo) throw new Error(`Músculo desconhecido na divisão: ${nome}.`);
+  for (const [nome, aparicoes] of Object.entries(ocorrencias)) {
+    const agrupamentos = MUSCULOS[nome];
+    if (!agrupamentos) throw new Error(`Músculo desconhecido na divisão: ${nome}.`);
 
-    const blocos = distribuir(musculo, indices.length);
+    const blocos = distribuir(agrupamentos, aparicoes.map((a) => a.quantidade));
 
-    indices.forEach((indiceDaSessao, i) => {
-      for (const slug of blocos[i]) planoPorSessao[indiceDaSessao].push(slug);
+    aparicoes.forEach((aparicao, i) => {
+      for (const slug of blocos[i]) planoPorSessao[aparicao.indice].push(slug);
     });
   }
 
