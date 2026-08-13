@@ -1,15 +1,3 @@
-// Catálogo de exercícios, revisado e aprovado pelo Miguel, um agrupamento por vez.
-//
-// agrupamento: slug de agrupamentos-seed.js
-// equipamento: barra | halter | smith | maquina | cabo | peso_corporal
-// enfase:      qual porção do agrupamento o exercício enfatiza. Só faz sentido
-//              nos agrupamentos unificados (tríceps, bíceps, glúteo, quadríceps,
-//              trapézio, panturrilha, posterior de coxa). O gerador usa para não
-//              escolher dois exercícios que batam na mesma porção.
-// genero:      ambos (padrão) | feminino | masculino
-// observacao:  texto de execução, escrito pelo Miguel. Segunda passada, depois
-//              que os agrupamentos estiverem todos fechados.
-
 const EXERCICIOS = [
   // ----- Peitoral maior — porção clavicular -----
   { nome: 'Supino inclinado com barra', agrupamento: 'peitoral_maior_clavicular', equipamento: 'barra' },
@@ -43,7 +31,6 @@ const EXERCICIOS = [
   { nome: 'Encolhimento com halteres', agrupamento: 'trapezio', equipamento: 'halter' },
 
   // ----- Eretores da espinha -----
-  // Observação a escrever: instrução sobre como segurar o peso.
   { nome: 'Banco romano', agrupamento: 'eretores_espinha', equipamento: 'peso_corporal' },
 
   // ----- Deltoide lateral -----
@@ -56,8 +43,6 @@ const EXERCICIOS = [
   { nome: 'Crucifixo inverso na máquina', agrupamento: 'deltoide_posterior', equipamento: 'maquina' },
 
   // ----- Quadríceps -----
-  // A posição entre parênteses é o que diferencia as ênfases: como quase tudo
-  // é vasto, é ela que impede o gerador de escolher dois exercícios iguais.
   { nome: 'Agachamento livre', agrupamento: 'quadriceps', equipamento: 'barra', enfase: 'vastos (alongado)' },
   { nome: 'Agachamento no smith', agrupamento: 'quadriceps', equipamento: 'smith', enfase: 'vastos (alongado)' },
   { nome: 'Hack machine', agrupamento: 'quadriceps', equipamento: 'maquina', enfase: 'vastos (alongado)' },

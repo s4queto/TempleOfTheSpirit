@@ -1,9 +1,6 @@
-// Tudo que envolve token e sessão fica aqui, para as páginas da área logada
-// não repetirem esse código.
-
 const API = 'http://localhost:3000';
 
-// Faz a chamada já com o token no cabeçalho e trata sessão expirada num lugar só.
+
 async function chamarApi(rota, opcoes = {}) {
     const token = localStorage.getItem('token');
 
@@ -21,7 +18,6 @@ async function chamarApi(rota, opcoes = {}) {
         }
     });
 
-    // 401 = o backend recusou o token (inválido ou expirado).
     if (resposta.status === 401) {
         localStorage.removeItem('token');
         alert('Sua sessão expirou. Faça login novamente.');
@@ -37,8 +33,7 @@ function sair() {
     window.location.href = 'index.html';
 }
 
-// Escapa o texto antes de jogar em innerHTML. Sem isso, uma tarefa chamada
-// <img src=x onerror=alert(1)> viraria código executando na página (XSS).
+
 function escapar(texto) {
     const div = document.createElement('div');
     div.textContent = texto ?? '';

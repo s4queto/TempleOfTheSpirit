@@ -1,12 +1,8 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 
-// __dirname é a pasta deste arquivo. Sem isso, o caminho seria relativo à pasta
-// de onde o comando foi executado, e rodar de fora de backend/ criaria um banco vazio.
 const db = new Database(path.join(__dirname, 'database.db'));
 
-// O SQLite ignora FOREIGN KEY por padrão. Sem esta linha, as regras de
-// relacionamento abaixo seriam apenas decorativas.
 db.pragma('foreign_keys = ON');
 
 db.exec(`
@@ -28,20 +24,10 @@ db.exec(`
     descricao TEXT,
     concluida INTEGER NOT NULL DEFAULT 0,
     criadaEm TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
-
-    -- Liga cada tarefa ao seu dono. O ON DELETE CASCADE faz o banco apagar
-    -- as tarefas junto quando o usuário é removido, evitando registros órfãos.
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
   )
 `);
 
-// Catálogo de exercícios. Não pertence a ninguém: é compartilhado por todos os
-// usuários, e é dele que o gerador sorteia os exercícios de cada treino.
-// ----- Modelo do gerador de treinos -----
-// Cada tabela abaixo é a tradução direta de uma decisão de docs/modelo-treinos.md.
-
-// O alvo muscular. Não é só um rótulo: carrega as propriedades de treino que
-// determinam a prescrição (dano) e o texto didático mostrado na ficha.
 db.exec(`
   CREATE TABLE IF NOT EXISTS agrupamentos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,8 +39,6 @@ db.exec(`
   )
 `);
 
-// O catálogo. Cada exercício ataca exatamente um agrupamento, e carrega junto
-// a observação de execução — o acervo de conhecimento do projeto.
 db.exec(`
   CREATE TABLE IF NOT EXISTS exercicios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,8 +52,6 @@ db.exec(`
   )
 `);
 
-// Substituições: "se a academia não tem esse aparelho, use aquele".
-// A chave primária composta impede cadastrar o mesmo par duas vezes.
 db.exec(`
   CREATE TABLE IF NOT EXISTS exercicio_alternativas (
     exercicio_id INTEGER NOT NULL,
@@ -80,8 +62,6 @@ db.exec(`
   )
 `);
 
-// O treino gerado para um usuário. O nível fica aqui porque define a
-// prescrição de todas as sessões.
 db.exec(`
   CREATE TABLE IF NOT EXISTS treinos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -95,8 +75,6 @@ db.exec(`
   )
 `);
 
-// Uma sessão = um dia da semana no treino. Numa divisão de 4 dias existem duas
-// sessões "Upper", com os mesmos agrupamentos e exercícios diferentes.
 db.exec(`
   CREATE TABLE IF NOT EXISTS treino_sessoes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -107,8 +85,6 @@ db.exec(`
   )
 `);
 
-// A ficha propriamente dita: qual exercício, em que posição, com que prescrição.
-// A ordem é definida pela regra do zig-zag, não pelo usuário.
 db.exec(`
   CREATE TABLE IF NOT EXISTS treino_exercicios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -123,7 +99,6 @@ db.exec(`
   )
 `);
 
-// Popula os agrupamentos só na primeira vez.
 const { AGRUPAMENTOS } = require('./agrupamentos-seed');
 
 const totalAgrupamentos = db.prepare('SELECT COUNT(*) AS c FROM agrupamentos').get().c;
@@ -133,8 +108,6 @@ if (totalAgrupamentos === 0) {
     'INSERT INTO agrupamentos (slug, nome, grupo, dano) VALUES (?, ?, ?, ?)'
   );
 
-  // transaction() agrupa tudo numa operação só: ou entra a lista inteira, ou
-  // nada entra. Também é muito mais rápido que inserir um a um.
   const inserirTodos = db.transaction((lista) => {
     for (const a of lista) inserir.run(a.slug, a.nome, a.grupo, a.dano);
   });
@@ -143,7 +116,6 @@ if (totalAgrupamentos === 0) {
   console.log(`${AGRUPAMENTOS.length} agrupamentos cadastrados.`);
 }
 
-// Popula o catálogo de exercícios só na primeira vez.
 const { EXERCICIOS } = require('./exercicios-seed');
 
 const totalExercicios = db.prepare('SELECT COUNT(*) AS c FROM exercicios').get().c;
@@ -159,8 +131,6 @@ if (totalExercicios === 0) {
     for (const e of lista) {
       const agrupamento = buscarAgrupamento.get(e.agrupamento);
 
-      // Se o slug não existir, a transação inteira é desfeita — melhor falhar
-      // alto do que gravar um catálogo pela metade.
       if (!agrupamento) {
         throw new Error(`Agrupamento "${e.agrupamento}" não existe (exercício: ${e.nome}).`);
       }

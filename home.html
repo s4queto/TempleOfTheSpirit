@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Começa escondido para não piscar o conteúdo antes de validar o token -->
     <main class="container container-largo" id="conteudo" style="display: none;">
 
         <nav class="topo">
@@ -73,7 +72,6 @@
                 return;
             }
 
-            // escapar() protege contra XSS: o título vem do usuário e vai para innerHTML.
             lista.innerHTML = tarefas.map(t => `
                 <li class="${t.concluida ? 'concluida' : ''}">
                     <input type="checkbox" ${t.concluida ? 'checked' : ''}
@@ -122,7 +120,6 @@
         }
 
         async function alternar(id, concluida) {
-            // O PUT exige o título, então buscamos a tarefa atual antes de mandar.
             const resposta = await chamarApi('/tarefas');
             if (!resposta) return;
 

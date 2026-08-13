@@ -1,7 +1,5 @@
 const path = require('path');
 
-// Sem o path explícito, o dotenv procuraria o .env na pasta de onde o comando
-// foi executado, e iniciar o servidor de fora de backend/ carregaria zero variáveis.
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const cors = require('cors');
@@ -14,7 +12,6 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
-// Falha na largada em vez de só quebrar quando alguém tentar logar.
 if (!process.env.JWT_SECRET) {
   console.error('ERRO: JWT_SECRET não definido. Copie backend/.env.example para backend/.env e preencha os valores.');
   process.exit(1);
@@ -40,9 +37,7 @@ app.get('/', (req, res) => {
   res.send('Teste');
 });
 
-// Middleware: roda ANTES da rota e só deixa passar quem tem token válido.
 function verificarToken(req, res, next) {
-  // O front manda o header: Authorization: Bearer <token>
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -51,10 +46,8 @@ function verificarToken(req, res, next) {
   }
 
   try {
-    // Confere a assinatura e a validade (expiresIn). Se algo estiver errado, joga erro.
     const dadosDoToken = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Guarda os dados do token no req para a rota usar depois.
     req.usuario = dadosDoToken;
     next();
 
@@ -99,7 +92,7 @@ app.post('/login', async (req, res) => {
 
   const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
 
- if (!senhaCorreta) {
+  if (!senhaCorreta) {
     return res.status(401).json({ erro: 'Usuário ou senha inválidos.' });
   }
 
@@ -113,9 +106,7 @@ app.post('/login', async (req, res) => {
   res.json({ mensagem: 'Login realizado com sucesso!', nome: usuario.nome, token });
 });
 
-// Rota protegida: o verificarToken entra no meio do caminho.
 app.get('/perfil', verificarToken, (req, res) => {
-  // req.usuario veio do token (id e nome que colocamos no jwt.sign do /login).
   const stmt = db.prepare('SELECT id, nome, email FROM usuarios WHERE id = ?');
   const usuario = stmt.get(req.usuario.id);
 
@@ -126,7 +117,6 @@ app.get('/perfil', verificarToken, (req, res) => {
   res.json({ usuario });
 });
 
-// Atualiza nome e e-mail do usuário logado.
 app.put('/perfil', verificarToken, (req, res) => {
   const { nome, email } = req.body;
 
@@ -135,20 +125,16 @@ app.put('/perfil', verificarToken, (req, res) => {
   }
 
   try {
-    // O WHERE id = ? usa o id do TOKEN, não algo que o front mandou.
-    // É isso que impede alguém de editar o perfil de outra pessoa.
     const update = db.prepare('UPDATE usuarios SET nome = ?, email = ? WHERE id = ?');
     update.run(nome, email, req.usuario.id);
 
     res.json({ mensagem: 'Perfil atualizado com sucesso!', usuario: { nome, email } });
 
   } catch (erro) {
-    // A coluna email é UNIQUE no banco, então o próprio SQLite barra duplicata.
     return res.status(400).json({ erro: 'Esse e-mail já está em uso.' });
   }
 });
 
-// Troca de senha de quem já está logado (diferente do fluxo de "esqueci a senha").
 app.put('/alterar-senha', verificarToken, async (req, res) => {
   const { senhaAtual, novaSenha } = req.body;
 
@@ -167,8 +153,6 @@ app.put('/alterar-senha', verificarToken, async (req, res) => {
     return res.status(404).json({ erro: 'Usuário não encontrado.' });
   }
 
-  // Ter o token não basta: exigimos a senha atual de novo.
-  // Assim, um token roubado não vira uma conta roubada de vez.
   const senhaCorreta = await bcrypt.compare(senhaAtual, usuario.senha);
 
   if (!senhaCorreta) {
@@ -182,10 +166,6 @@ app.put('/alterar-senha', verificarToken, async (req, res) => {
 
   res.json({ mensagem: 'Senha alterada com sucesso!' });
 });
-
-// ----- Tarefas -----
-// Regra de ouro destas rotas: TODA consulta filtra por usuario_id vindo do token.
-// Sem isso, trocar o número na URL daria acesso às tarefas de outra pessoa (IDOR).
 
 app.get('/tarefas', verificarToken, (req, res) => {
   const stmt = db.prepare(
@@ -220,8 +200,6 @@ app.put('/tarefas/:id', verificarToken, (req, res) => {
     return res.status(400).json({ erro: 'Informe o título da tarefa.' });
   }
 
-  // O AND usuario_id = ? é a trava: se a tarefa for de outra pessoa,
-  // nenhuma linha é afetada e o resultado é o mesmo de "não existe".
   const stmt = db.prepare(
     'UPDATE tarefas SET titulo = ?, descricao = ?, concluida = ? WHERE id = ? AND usuario_id = ?'
   );
