@@ -13,11 +13,11 @@ const MUSCULOS = {
   antebraco: ['flexores_punho', 'extensores_punho'],
 };
 
-const PUSH = { peito: 3, ombro: 2, triceps: 2 };
-const PULL = { costas: 4, biceps: 2, antebraco: 2 };
-const LEGS = { quadriceps: 2, posterior_coxa: 2, gluteo: 1, adutores: 1, panturrilha: 1, core: 2 };
-const UPPER = { peito: 2, costas: 2, ombro: 2, biceps: 1, triceps: 1 };
-const LOWER = { quadriceps: 2, posterior_coxa: 1, gluteo: 1, adutores: 1, panturrilha: 1, core: 1, antebraco: 1 };
+const PUSH = { peito: 3, ombro: 2, triceps: 1 };
+const PULL = { costas: 4, biceps: 1, antebraco: 1 };
+const LEGS = { quadriceps: 2, posterior_coxa: 2, gluteo: 1, adutores: 1, panturrilha: 1, core: 1 };
+const UPPER = { peito: 2, costas: 2, ombro: 1, biceps: 1, triceps: 1, antebraco: 1 };
+const LOWER = { quadriceps: 2, posterior_coxa: 1, gluteo: 1, adutores: 1, panturrilha: 1, core: 1 };
 
 const DIVISOES = {
   3: {
