@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <title>Meus treinos</title>
+    <link rel="stylesheet" href="app.css">
+</head>
+<body style="display: none;">
+
+    <aside class="menu">
+        <h1><i class='bx bxs-dumbbell'></i> Treinos</h1>
+
+        <nav>
+            <a data-secao="perfil"><i class='bx bxs-user'></i> Meu perfil</a>
+            <a data-secao="treinos" class="ativo"><i class='bx bxs-notepad'></i> Meus treinos</a>
+            <a data-secao="novo"><i class='bx bxs-plus-circle'></i> Novo treino</a>
+            <a data-secao="evolucao"><i class='bx bxs-chart'></i> Evolução</a>
+        </nav>
+
+        <div class="rodape">
+            <span id="saudacao"></span>
+            <a onclick="sair()"><i class='bx bx-log-out'></i> Sair da conta</a>
+        </div>
+    </aside>
+
+    <main class="conteudo">
+
+        <section class="secao" id="secao-perfil">
+            <h2 class="titulo">Meu perfil</h2>
+            <p class="subtitulo">Seus dados de acesso.</p>
+
+            <div class="card">
+                <h3>Dados pessoais</h3>
+                <p class="desc">Alterar nome ou e-mail da conta.</p>
+
+                <div class="campo">
+                    <label for="nome">Nome</label>
+                    <input type="text" id="nome">
+                </div>
+
+                <div class="campo">
+                    <label for="email">E-mail</label>
+                    <input type="email" id="email">
+                </div>
+
+                <button class="botao" onclick="salvarPerfil()">Salvar alterações</button>
+                <p class="mensagem" id="msgPerfil"></p>
+            </div>
+
+            <div class="card">
+                <h3>Alterar senha</h3>
+                <p class="desc">A senha atual é exigida mesmo com você já logado.</p>
+
+                <div class="campo">
+                    <label for="senhaAtual">Senha atual</label>
+                    <input type="password" id="senhaAtual">
+                </div>
+
+                <div class="campo">
+                    <label for="novaSenha">Nova senha</label>
+                    <input type="password" id="novaSenha">
+                </div>
+
+                <button class="botao" onclick="alterarSenha()">Alterar senha</button>
+                <p class="mensagem" id="msgSenha"></p>
+            </div>
+        </section>
+
+        <section class="secao visivel" id="secao-treinos">
+            <h2 class="titulo">Meus treinos</h2>
+            <p class="subtitulo">As fichas que você já gerou.</p>
+
+            <div id="listaTreinos"></div>
+            <div id="fichaAberta"></div>
+        </section>
+
+        <section class="secao" id="secao-novo">
+            <h2 class="titulo">Novo treino</h2>
+            <p class="subtitulo">Responda três perguntas e a ficha é montada na hora.</p>
+
+            <div class="card">
+                <h3>Nível</h3>
+                <p class="desc">Define o volume de séries e a faixa de repetições.</p>
+                <div class="opcoes" id="opcoesNivel">
+                    <div class="opcao ativa" data-valor="iniciante">Iniciante<small>3 séries</small></div>
+                    <div class="opcao" data-valor="intermediario">Intermediário<small>2 séries</small></div>
+                    <div class="opcao" data-valor="avancado">Avançado<small>2 séries</small></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Gênero</h3>
+                <p class="desc">Filtra quais exercícios entram na seleção.</p>
+                <div class="opcoes" id="opcoesGenero">
+                    <div class="opcao ativa" data-valor="masculino">Masculino</div>
+                    <div class="opcao" data-valor="feminino">Feminino</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Dias por semana</h3>
+                <p class="desc">Define a divisão. De 4 dias em diante cada músculo é treinado duas vezes por semana.</p>
+                <div class="opcoes" id="opcoesDias">
+                    <div class="opcao" data-valor="3">3 dias<small>Push / Pull / Legs</small></div>
+                    <div class="opcao ativa" data-valor="4">4 dias<small>Upper / Lower</small></div>
+                    <div class="opcao" data-valor="5">5 dias<small>PPLUL</small></div>
+                    <div class="opcao" data-valor="6">6 dias<small>PPL x2</small></div>
+                </div>
+            </div>
+
+            <button class="botao" onclick="gerarTreino()">Gerar ficha</button>
+            <p class="mensagem" id="msgNovo"></p>
+        </section>
+
+        <section class="secao" id="secao-evolucao">
+            <h2 class="titulo">Evolução</h2>
+            <p class="subtitulo">Acompanhamento de carga ao longo do tempo.</p>
+
+            <div class="aviso">
+                Ainda não construído. Esta tela vai mostrar a evolução de carga por
+                exercício, e depende do registro de séries durante o treino — que é o
+                próximo passo do projeto.
+            </div>
+        </section>
+
+    </main>
+
+    <script src="auth.js"></script>
+    <script>
+        const escolhas = { nivel: 'iniciante', genero: 'masculino', dias: '4' };
+
+        function abrirSecao(nome) {
+            document.querySelectorAll('.secao').forEach((s) => s.classList.remove('visivel'));
+            document.getElementById('secao-' + nome).classList.add('visivel');
+
+            document.querySelectorAll('.menu nav a').forEach((a) => {
+                a.classList.toggle('ativo', a.dataset.secao === nome);
+            });
+
+            if (nome === 'treinos') carregarTreinos();
+        }
+
+        document.querySelectorAll('.menu nav a').forEach((a) => {
+            a.onclick = () => abrirSecao(a.dataset.secao);
+        });
+
+        function ligarOpcoes(id, chave) {
+            const grupo = document.getElementById(id);
+            grupo.querySelectorAll('.opcao').forEach((opcao) => {
+                opcao.onclick = () => {
+                    grupo.querySelectorAll('.opcao').forEach((o) => o.classList.remove('ativa'));
+                    opcao.classList.add('ativa');
+                    escolhas[chave] = opcao.dataset.valor;
+                };
+            });
+        }
+
+        ligarOpcoes('opcoesNivel', 'nivel');
+        ligarOpcoes('opcoesGenero', 'genero');
+        ligarOpcoes('opcoesDias', 'dias');
+
+        async function iniciar() {
+            const resposta = await chamarApi('/perfil');
+            if (!resposta) return;
+
+            const { usuario } = await resposta.json();
+
+            document.getElementById('saudacao').textContent = usuario.nome;
+            document.getElementById('nome').value = usuario.nome;
+            document.getElementById('email').value = usuario.email;
+
+            document.body.style.display = 'flex';
+            carregarTreinos();
+        }
+
+        async function salvarPerfil() {
+            const nome = document.getElementById('nome').value;
+            const email = document.getElementById('email').value;
+            const msg = document.getElementById('msgPerfil');
+
+            const resposta = await chamarApi('/perfil', {
+                method: 'PUT',
+                body: JSON.stringify({ nome, email })
+            });
+            if (!resposta) return;
+
+            const dados = await resposta.json();
+            msg.textContent = resposta.ok ? dados.mensagem : dados.erro;
+            msg.className = 'mensagem ' + (resposta.ok ? 'ok' : 'erro');
+
+            if (resposta.ok) document.getElementById('saudacao').textContent = dados.usuario.nome;
+        }
+
+        async function alterarSenha() {
+            const senhaAtual = document.getElementById('senhaAtual').value;
+            const novaSenha = document.getElementById('novaSenha').value;
+            const msg = document.getElementById('msgSenha');
+
+            const resposta = await chamarApi('/alterar-senha', {
+                method: 'PUT',
+                body: JSON.stringify({ senhaAtual, novaSenha })
+            });
+            if (!resposta) return;
+
+            const dados = await resposta.json();
+            msg.textContent = resposta.ok ? dados.mensagem : dados.erro;
+            msg.className = 'mensagem ' + (resposta.ok ? 'ok' : 'erro');
+
+            if (resposta.ok) {
+                document.getElementById('senhaAtual').value = '';
+                document.getElementById('novaSenha').value = '';
+            }
+        }
+
+        async function gerarTreino() {
+            const msg = document.getElementById('msgNovo');
+            msg.textContent = 'Montando a ficha...';
+            msg.className = 'mensagem';
+
+            const resposta = await chamarApi('/treinos', {
+                method: 'POST',
+                body: JSON.stringify(escolhas)
+            });
+            if (!resposta) return;
+
+            const dados = await resposta.json();
+
+            if (!resposta.ok) {
+                msg.textContent = dados.erro;
+                msg.className = 'mensagem erro';
+                return;
+            }
+
+            msg.textContent = '';
+            abrirSecao('treinos');
+            mostrarFicha(dados.treino);
+        }
+
+        async function carregarTreinos() {
+            const resposta = await chamarApi('/treinos');
+            if (!resposta) return;
+
+            const { treinos } = await resposta.json();
+            const lista = document.getElementById('listaTreinos');
+
+            if (treinos.length === 0) {
+                lista.innerHTML = '<div class="vazio">Nenhuma ficha ainda. Vá em <strong>Novo treino</strong> para gerar a primeira.</div>';
+                document.getElementById('fichaAberta').innerHTML = '';
+                return;
+            }
+
+            lista.innerHTML = '<div class="lista-treinos">' + treinos.map((t) => `
+                <div class="item">
+                    <div>
+                        <h4>${escapar(t.nome)}</h4>
+                        <p>${escapar(t.nivel)} · ${t.sessoes} sessões · criado em ${escapar(t.criadoEm)}</p>
+                    </div>
+                    <div class="acoes">
+                        <button class="botao secundario" onclick="abrirFicha(${t.id})">Abrir</button>
+                        <button class="botao perigo" onclick="excluirTreino(${t.id})">Excluir</button>
+                    </div>
+                </div>
+            `).join('') + '</div>';
+        }
+
+        async function abrirFicha(id) {
+            const resposta = await chamarApi('/treinos/' + id);
+            if (!resposta) return;
+
+            const dados = await resposta.json();
+            if (!resposta.ok) return;
+
+            mostrarFicha(dados.treino);
+        }
+
+        function mostrarFicha(treino) {
+            document.getElementById('fichaAberta').innerHTML = `
+                <h3 style="margin: 30px 0 4px; font-size: 19px;">${escapar(treino.nome)}</h3>
+                <p class="subtitulo">${escapar(treino.nivel)} · ${escapar(treino.genero)}</p>
+            ` + treino.sessoes.map((s) => `
+                <div class="sessao">
+                    <header>
+                        <strong>${escapar(s.nome)}</strong>
+                        <span>${s.exercicios.length} exercícios</span>
+                    </header>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Exercício</th>
+                                <th>Séries</th>
+                                <th>Reps</th>
+                                <th>RIR</th>
+                                <th>Observação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${s.exercicios.map((e) => `
+                                <tr>
+                                    <td class="numero">${e.ordem + 1}</td>
+                                    <td>
+                                        ${escapar(e.nome)}
+                                        <span class="alvo">${escapar(e.agrupamento_nome)}</span>
+                                    </td>
+                                    <td class="prescricao">${e.series}</td>
+                                    <td class="prescricao">${escapar(e.reps)}</td>
+                                    <td class="prescricao">${escapar(e.rir)}</td>
+                                    <td>${escapar(e.observacao || '—')}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `).join('');
+
+            document.getElementById('fichaAberta').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function excluirTreino(id) {
+            if (!confirm('Excluir esta ficha?')) return;
+
+            const resposta = await chamarApi('/treinos/' + id, { method: 'DELETE' });
+            if (!resposta) return;
+
+            document.getElementById('fichaAberta').innerHTML = '';
+            carregarTreinos();
+        }
+
+        iniciar();
+    </script>
+
+</body>
+</html>
