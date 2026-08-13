@@ -1,6 +1,9 @@
 const Database = require('better-sqlite3');
+const path = require('path');
 
-const db = new Database('database.db');
+// __dirname é a pasta deste arquivo. Sem isso, o caminho seria relativo à pasta
+// de onde o comando foi executado, e rodar de fora de backend/ criaria um banco vazio.
+const db = new Database(path.join(__dirname, 'database.db'));
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS usuarios (
