@@ -12,9 +12,15 @@ db.exec(`
     email TEXT NOT NULL UNIQUE,
     senha TEXT NOT NULL,
     resetToken TEXT,
-    resetTokenExpira INTEGER
+    resetTokenExpira INTEGER,
+    foto TEXT
   )
 `);
+
+const colunasUsuarios = db.prepare("PRAGMA table_info(usuarios)").all().map((c) => c.name);
+if (!colunasUsuarios.includes('foto')) {
+  db.exec('ALTER TABLE usuarios ADD COLUMN foto TEXT');
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS tarefas (
@@ -96,6 +102,20 @@ db.exec(`
     rir TEXT NOT NULL,
     FOREIGN KEY (sessao_id) REFERENCES treino_sessoes(id) ON DELETE CASCADE,
     FOREIGN KEY (exercicio_id) REFERENCES exercicios(id)
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS registros_series (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id INTEGER NOT NULL,
+    treino_exercicio_id INTEGER NOT NULL,
+    numero_serie INTEGER NOT NULL,
+    carga REAL NOT NULL,
+    repeticoes INTEGER NOT NULL,
+    registradoEm TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (treino_exercicio_id) REFERENCES treino_exercicios(id) ON DELETE CASCADE
   )
 `);
 

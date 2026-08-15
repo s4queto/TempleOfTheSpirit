@@ -6,6 +6,15 @@
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <title>Meus treinos</title>
     <link rel="stylesheet" href="app.css">
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="boneco.js"></script>
 </head>
 <body style="display: none;">
 
@@ -17,10 +26,10 @@
             <a data-secao="treinos" class="ativo"><i class='bx bxs-notepad'></i> Meus treinos</a>
             <a data-secao="novo"><i class='bx bxs-plus-circle'></i> Novo treino</a>
             <a data-secao="evolucao"><i class='bx bxs-chart'></i> Evolução</a>
+            <a data-secao="info"><i class='bx bxs-info-circle'></i> Mais informações</a>
         </nav>
 
         <div class="rodape">
-            <span id="saudacao"></span>
             <a onclick="sair()"><i class='bx bx-log-out'></i> Sair da conta</a>
         </div>
     </aside>
@@ -30,6 +39,23 @@
         <section class="secao" id="secao-perfil">
             <h2 class="titulo">Meu perfil</h2>
             <p class="subtitulo">Seus dados de acesso.</p>
+
+            <div class="card">
+                <h3>Foto de perfil</h3>
+                <p class="desc">Aparece só se você colocar uma. Sem foto, fica o ícone padrão.</p>
+
+                <div class="foto-perfil-area">
+                    <div class="avatar" id="avatar">
+                        <i class='bx bxs-user'></i>
+                    </div>
+                    <div>
+                        <input type="file" id="inputFoto" accept="image/*" style="display: none;" onchange="selecionarFoto(event)">
+                        <button class="botao secundario botao-pequeno" onclick="document.getElementById('inputFoto').click()">Escolher foto</button>
+                        <button class="botao perigo" id="botaoRemoverFoto" onclick="removerFoto()" style="display: none;">Remover</button>
+                    </div>
+                </div>
+                <p class="mensagem" id="msgFoto"></p>
+            </div>
 
             <div class="card">
                 <h3>Dados pessoais</h3>
@@ -84,9 +110,9 @@
                 <h3>Nível</h3>
                 <p class="desc">Define o volume de séries e a faixa de repetições.</p>
                 <div class="opcoes" id="opcoesNivel">
-                    <div class="opcao ativa" data-valor="iniciante">Iniciante<small>3 séries</small></div>
-                    <div class="opcao" data-valor="intermediario">Intermediário<small>2 séries</small></div>
-                    <div class="opcao" data-valor="avancado">Avançado<small>2 séries</small></div>
+                    <div class="opcao ativa" data-valor="iniciante">Iniciante</div>
+                    <div class="opcao" data-valor="intermediario">Intermediário</div>
+                    <div class="opcao" data-valor="avancado">Avançado</div>
                 </div>
             </div>
 
@@ -118,11 +144,69 @@
             <h2 class="titulo">Evolução</h2>
             <p class="subtitulo">Acompanhamento de carga ao longo do tempo.</p>
 
-            <div class="aviso">
-                Ainda não construído. Esta tela vai mostrar a evolução de carga por
-                exercício, e depende do registro de séries durante o treino — que é o
-                próximo passo do projeto.
+            <div class="card">
+                <h3>Sessão</h3>
+                <p class="desc">Escolha uma sessão para ver a evolução de carga de todos os exercícios dela.</p>
+                <div class="campo">
+                    <select id="seletorSessao"></select>
+                </div>
             </div>
+
+            <div class="grade-evolucao" id="graficoEvolucao"></div>
+        </section>
+
+        <section class="secao" id="secao-info">
+            <h2 class="titulo">Mais informações</h2>
+            <p class="subtitulo">Conceitos usados na ficha, explicados.</p>
+
+            <div class="card">
+                <h3>Cafeína pré-treino</h3>
+                <p class="desc">
+                    Tomada de 30 a 45 minutos antes de treinar, a cafeína melhora foco e reduz a
+                    percepção de esforço, o que ajuda a levar as séries até a faixa de RIR
+                    prescrita. Uma dose de referência fica em torno de 3 a 6mg por kg de peso
+                    corporal. Evite tomar muito tarde no dia — o efeito estimulante pode atrapalhar
+                    o sono, e sono ruim prejudica a recuperação mais do que a cafeína ajuda no treino.
+                </p>
+            </div>
+
+            <div class="card">
+                <h3>Água</h3>
+                <p class="desc">
+                    A hidratação afeta força, resistência e recuperação — não é só sobre beber
+                    água durante o treino, e sim ao longo do dia inteiro. Desidratação leve já é
+                    suficiente para reduzir o desempenho nas últimas séries de uma sessão.
+                </p>
+            </div>
+
+            <div class="card">
+                <h3>RIR — Reps In Reserve</h3>
+                <p class="desc">
+                    RIR é quantas repetições você ainda conseguiria fazer antes de falhar. A ficha
+                    usa a faixa <strong>1/0</strong>: terminar a série com 1 repetição de reserva
+                    ou levar até a falha técnica. É perto da falha, mas não é sempre a falha total
+                    — isso mantém a intensidade alta sem acumular fadiga demais para se recuperar
+                    a tempo da próxima sessão.
+                </p>
+            </div>
+
+            <div class="card">
+                <h3>Séries PAP</h3>
+                <p class="desc">
+                    PAP (Potenciação Pós-Ativação) é o princípio por trás de fazer uma série bem
+                    intensa — perto da falha, com carga alta ou baixa velocidade — pouco antes de
+                    outra série do mesmo padrão de movimento. A ativação nervosa da primeira série
+                    deixa o músculo temporariamente mais forte na série seguinte, permitindo mais
+                    carga ou mais repetições do que sozinha.
+                </p>
+            </div>
+
+            <p class="creditos">
+                Malha 3D do boneco de músculos: projeto
+                <a href="https://www.z-anatomy.com/" target="_blank" rel="noopener">Z-Anatomy</a>,
+                baseado no dataset <a href="https://bodyparts3d.dbcls.jp/" target="_blank" rel="noopener">BodyParts3D</a> (DBCLS),
+                licença <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>.
+            </p>
         </section>
 
     </main>
@@ -140,6 +224,7 @@
             });
 
             if (nome === 'treinos') carregarTreinos();
+            if (nome === 'evolucao') carregarEvolucao();
         }
 
         document.querySelectorAll('.menu nav a').forEach((a) => {
@@ -167,12 +252,72 @@
 
             const { usuario } = await resposta.json();
 
-            document.getElementById('saudacao').textContent = usuario.nome;
             document.getElementById('nome').value = usuario.nome;
             document.getElementById('email').value = usuario.email;
+            mostrarAvatar(usuario.foto);
 
             document.body.style.display = 'flex';
             carregarTreinos();
+        }
+
+        function mostrarAvatar(foto) {
+            const avatar = document.getElementById('avatar');
+            const botaoRemover = document.getElementById('botaoRemoverFoto');
+
+            avatar.innerHTML = foto
+                ? `<img src="${foto}" alt="Foto de perfil">`
+                : `<i class='bx bxs-user'></i>`;
+            botaoRemover.style.display = foto ? 'inline-block' : 'none';
+        }
+
+        function selecionarFoto(evento) {
+            const arquivo = evento.target.files[0];
+            if (!arquivo) return;
+
+            const msg = document.getElementById('msgFoto');
+            const imagem = new Image();
+            const leitor = new FileReader();
+
+            leitor.onload = () => { imagem.src = leitor.result; };
+            imagem.onload = async () => {
+                const tamanho = 256;
+                const canvas = document.createElement('canvas');
+                canvas.width = tamanho;
+                canvas.height = tamanho;
+                const ctx = canvas.getContext('2d');
+
+                const lado = Math.min(imagem.width, imagem.height);
+                const origemX = (imagem.width - lado) / 2;
+                const origemY = (imagem.height - lado) / 2;
+                ctx.drawImage(imagem, origemX, origemY, lado, lado, 0, 0, tamanho, tamanho);
+
+                const foto = canvas.toDataURL('image/jpeg', 0.85);
+
+                const resposta = await chamarApi('/perfil/foto', {
+                    method: 'PUT',
+                    body: JSON.stringify({ foto })
+                });
+                if (!resposta) return;
+
+                const dados = await resposta.json();
+                if (resposta.ok) {
+                    mostrarAvatar(foto);
+                    msg.textContent = '';
+                } else {
+                    msg.textContent = dados.erro;
+                    msg.className = 'mensagem erro';
+                }
+            };
+
+            leitor.readAsDataURL(arquivo);
+            evento.target.value = '';
+        }
+
+        async function removerFoto() {
+            const resposta = await chamarApi('/perfil/foto', { method: 'DELETE' });
+            if (!resposta) return;
+
+            if (resposta.ok) mostrarAvatar(null);
         }
 
         async function salvarPerfil() {
@@ -189,8 +334,6 @@
             const dados = await resposta.json();
             msg.textContent = resposta.ok ? dados.mensagem : dados.erro;
             msg.className = 'mensagem ' + (resposta.ok ? 'ok' : 'erro');
-
-            if (resposta.ok) document.getElementById('saudacao').textContent = dados.usuario.nome;
         }
 
         async function alterarSenha() {
@@ -275,7 +418,12 @@
             mostrarFicha(dados.treino);
         }
 
+        let bonecosAtivos = [];
+
         function mostrarFicha(treino) {
+            bonecosAtivos.forEach((b) => b.destruir());
+            bonecosAtivos = [];
+
             document.getElementById('fichaAberta').innerHTML = `
                 <h3 style="margin: 30px 0 4px; font-size: 19px;">${escapar(treino.nome)}</h3>
                 <p class="subtitulo">${escapar(treino.nivel)} · ${escapar(treino.genero)}</p>
@@ -285,6 +433,10 @@
                         <strong>${escapar(s.nome)}</strong>
                         <span>${s.exercicios.length} exercícios</span>
                     </header>
+                    <div class="boneco-wrap">
+                        <div class="boneco" data-slugs="${[...new Set(s.exercicios.map((e) => e.agrupamento))].join(',')}"></div>
+                        <p class="boneco-legenda">Músculos trabalhados nesta sessão</p>
+                    </div>
                     <table>
                         <thead>
                             <tr>
@@ -294,6 +446,7 @@
                                 <th>Reps</th>
                                 <th>RIR</th>
                                 <th>Observação</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -308,6 +461,16 @@
                                     <td class="prescricao">${escapar(e.reps)}</td>
                                     <td class="prescricao">${escapar(e.rir)}</td>
                                     <td>${escapar(e.observacao || '—')}</td>
+                                    <td><button class="botao secundario botao-pequeno" onclick="toggleRegistro(${e.treino_exercicio_id})">Registrar</button></td>
+                                </tr>
+                                <tr class="linha-registro" id="registro-${e.treino_exercicio_id}" style="display: none;">
+                                    <td colspan="7">
+                                        <div class="registro-series" id="registroSeries-${e.treino_exercicio_id}">
+                                            ${camposSeries(e.series)}
+                                        </div>
+                                        <button class="botao" onclick="salvarRegistro(${e.treino_exercicio_id})">Salvar série</button>
+                                        <p class="mensagem" id="msgRegistro-${e.treino_exercicio_id}"></p>
+                                    </td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -315,7 +478,160 @@
                 </div>
             `).join('');
 
+            document.querySelectorAll('.boneco').forEach((el) => {
+                if (!window.criarBoneco) return;
+                const slugs = el.dataset.slugs.split(',').filter(Boolean);
+                bonecosAtivos.push(window.criarBoneco(el, slugs));
+            });
+
             document.getElementById('fichaAberta').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function camposSeries(qtdSeries) {
+            let html = '';
+            for (let i = 1; i <= qtdSeries; i++) {
+                html += `
+                    <div class="linha-serie">
+                        <span>Série ${i}</span>
+                        <input type="number" step="0.5" min="0" placeholder="Carga (kg)" data-serie="${i}" data-campo="carga">
+                        <input type="number" step="1" min="0" placeholder="Reps" data-serie="${i}" data-campo="reps">
+                    </div>
+                `;
+            }
+            return html;
+        }
+
+        function toggleRegistro(treinoExercicioId) {
+            const linha = document.getElementById('registro-' + treinoExercicioId);
+            linha.style.display = linha.style.display === 'none' ? 'table-row' : 'none';
+        }
+
+        async function salvarRegistro(treinoExercicioId) {
+            const container = document.getElementById('registroSeries-' + treinoExercicioId);
+            const msg = document.getElementById('msgRegistro-' + treinoExercicioId);
+
+            const registros = [];
+            container.querySelectorAll('.linha-serie').forEach((linha, i) => {
+                const carga = linha.querySelector('[data-campo="carga"]').value;
+                const reps = linha.querySelector('[data-campo="reps"]').value;
+
+                if (carga !== '' && reps !== '') {
+                    registros.push({ numeroSerie: i + 1, carga: Number(carga), repeticoes: Number(reps) });
+                }
+            });
+
+            if (registros.length === 0) {
+                msg.textContent = 'Preencha ao menos uma série.';
+                msg.className = 'mensagem erro';
+                return;
+            }
+
+            const resposta = await chamarApi('/treino-exercicios/' + treinoExercicioId + '/registros', {
+                method: 'POST',
+                body: JSON.stringify({ registros })
+            });
+            if (!resposta) return;
+
+            const dados = await resposta.json();
+            msg.textContent = resposta.ok ? dados.mensagem : dados.erro;
+            msg.className = 'mensagem ' + (resposta.ok ? 'ok' : 'erro');
+        }
+
+        async function carregarEvolucao() {
+            const resposta = await chamarApi('/evolucao/sessoes');
+            if (!resposta) return;
+
+            const { sessoes } = await resposta.json();
+            const seletor = document.getElementById('seletorSessao');
+            const grafico = document.getElementById('graficoEvolucao');
+
+            if (sessoes.length === 0) {
+                seletor.innerHTML = '';
+                grafico.innerHTML = '<div class="vazio">Nenhuma ficha ainda. Vá em <strong>Novo treino</strong> para gerar a primeira.</div>';
+                return;
+            }
+
+            seletor.innerHTML = sessoes.map((s) => `<option value="${s.id}">${escapar(s.nome)} — ${escapar(s.treino_nome)}</option>`).join('');
+            seletor.onchange = () => mostrarEvolucaoSessao(seletor.value);
+            mostrarEvolucaoSessao(seletor.value);
+        }
+
+        async function mostrarEvolucaoSessao(sessaoId) {
+            const resposta = await chamarApi('/evolucao/sessoes/' + sessaoId);
+            if (!resposta) return;
+
+            const { exercicios } = await resposta.json();
+            const grafico = document.getElementById('graficoEvolucao');
+
+            grafico.innerHTML = exercicios.map((e) => {
+                const porDia = new Map();
+                e.registros.forEach((r) => {
+                    const dia = r.registradoEm.slice(0, 10);
+                    const atual = porDia.get(dia);
+                    // guarda a serie de maior carga do dia — carga e reps sempre do mesmo set
+                    if (atual === undefined || r.carga > atual.carga) {
+                        porDia.set(dia, { carga: r.carga, repeticoes: r.repeticoes });
+                    }
+                });
+
+                const pontos = [...porDia.entries()].map(([dia, v]) => ({ dia, ...v }));
+
+                return `
+                    <div class="card">
+                        <h3>${escapar(e.nome)}</h3>
+                        ${pontos.length === 0
+                            ? '<div class="vazio">Sem registros ainda.</div>'
+                            : `
+                                <p class="rotulo-grafico">Carga (kg)</p>
+                                ${montarGrafico(pontos, 'carga', 'kg', 'var(--azul)')}
+                                <p class="rotulo-grafico">Repetições</p>
+                                ${montarGrafico(pontos, 'repeticoes', '', 'var(--verde)')}
+                            `}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function formatarData(iso) {
+            const [, mes, dia] = iso.split('-');
+            return `${dia}/${mes}`;
+        }
+
+        function montarGrafico(pontos, campo, sufixo, cor) {
+            const largura = 460;
+            const altura = 150;
+            const margem = { topo: 26, baixo: 30, esquerda: 16, direita: 16 };
+
+            const valores = pontos.map((p) => p[campo]);
+            const minValor = Math.min(...valores);
+            const maxValor = Math.max(...valores);
+            const faixa = maxValor - minValor || 1;
+
+            const areaLargura = largura - margem.esquerda - margem.direita;
+            const areaAltura = altura - margem.topo - margem.baixo;
+            const passoX = pontos.length > 1 ? areaLargura / (pontos.length - 1) : 0;
+
+            const coords = pontos.map((p, i) => {
+                const x = margem.esquerda + (pontos.length > 1 ? i * passoX : areaLargura / 2);
+                const y = margem.topo + areaAltura - ((p[campo] - minValor) / faixa) * areaAltura;
+                return { x, y, ...p };
+            });
+
+            const linha = coords.map((c) => `${c.x},${c.y}`).join(' ');
+
+            const pontosSvg = coords.map((c) => `
+                <circle cx="${c.x}" cy="${c.y}" r="4" fill="${cor}"></circle>
+                <text x="${c.x}" y="${c.y - 12}" text-anchor="middle" font-size="12" fill="var(--texto)">${c[campo]}${sufixo}</text>
+                <text x="${c.x}" y="${altura - 12}" text-anchor="middle" font-size="11" fill="var(--suave)">${formatarData(c.dia)}</text>
+            `).join('');
+
+            return `
+                <svg viewBox="0 0 ${largura} ${altura}" width="100%" style="max-width: 100%; height: auto; display: block;">
+                    <line x1="${margem.esquerda}" y1="${altura - margem.baixo}" x2="${largura - margem.direita}" y2="${altura - margem.baixo}" stroke="var(--borda)"></line>
+                    <polyline points="${linha}" fill="none" stroke="${cor}" stroke-width="2.5"></polyline>
+                    ${pontosSvg}
+                </svg>
+            `;
         }
 
         async function excluirTreino(id) {
@@ -324,6 +640,8 @@
             const resposta = await chamarApi('/treinos/' + id, { method: 'DELETE' });
             if (!resposta) return;
 
+            bonecosAtivos.forEach((b) => b.destruir());
+            bonecosAtivos = [];
             document.getElementById('fichaAberta').innerHTML = '';
             carregarTreinos();
         }

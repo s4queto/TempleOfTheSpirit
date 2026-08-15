@@ -32,7 +32,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-app.use(express.json());
+app.use(express.json({ limit: '3mb' }));
 app.use(express.static(path.join(__dirname, '..')));
 
 function verificarToken(req, res, next) {
@@ -105,7 +105,7 @@ app.post('/login', async (req, res) => {
 });
 
 app.get('/perfil', verificarToken, (req, res) => {
-  const stmt = db.prepare('SELECT id, nome, email FROM usuarios WHERE id = ?');
+  const stmt = db.prepare('SELECT id, nome, email, foto FROM usuarios WHERE id = ?');
   const usuario = stmt.get(req.usuario.id);
 
   if (!usuario) {
@@ -113,6 +113,24 @@ app.get('/perfil', verificarToken, (req, res) => {
   }
 
   res.json({ usuario });
+});
+
+app.put('/perfil/foto', verificarToken, (req, res) => {
+  const { foto } = req.body;
+
+  if (!foto || !foto.startsWith('data:image/')) {
+    return res.status(400).json({ erro: 'Envie uma imagem válida.' });
+  }
+
+  db.prepare('UPDATE usuarios SET foto = ? WHERE id = ?').run(foto, req.usuario.id);
+
+  res.json({ mensagem: 'Foto atualizada!' });
+});
+
+app.delete('/perfil/foto', verificarToken, (req, res) => {
+  db.prepare('UPDATE usuarios SET foto = NULL WHERE id = ?').run(req.usuario.id);
+
+  res.json({ mensagem: 'Foto removida!' });
 });
 
 app.put('/perfil', verificarToken, (req, res) => {
@@ -252,7 +270,7 @@ function montarFicha(treinoId, usuarioId) {
   ).all(treino.id);
 
   const exercicios = db.prepare(`
-    SELECT te.sessao_id, te.ordem, te.series, te.reps, te.rir,
+    SELECT te.id AS treino_exercicio_id, te.sessao_id, te.ordem, te.series, te.reps, te.rir,
            e.id AS exercicio_id, e.nome, e.equipamento, e.enfase, e.observacao,
            a.slug AS agrupamento, a.nome AS agrupamento_nome, a.grupo, a.explicacao
     FROM treino_exercicios te
@@ -352,6 +370,104 @@ app.delete('/treinos/:id', verificarToken, (req, res) => {
   }
 
   res.json({ mensagem: 'Treino excluído!' });
+});
+
+function buscarTreinoExercicio(treinoExercicioId, usuarioId) {
+  return db.prepare(`
+    SELECT te.id, te.exercicio_id
+    FROM treino_exercicios te
+    JOIN treino_sessoes s ON s.id = te.sessao_id
+    JOIN treinos t ON t.id = s.treino_id
+    WHERE te.id = ? AND t.usuario_id = ?
+  `).get(treinoExercicioId, usuarioId);
+}
+
+app.post('/treino-exercicios/:id/registros', verificarToken, (req, res) => {
+  const { registros } = req.body;
+
+  if (!Array.isArray(registros) || registros.length === 0) {
+    return res.status(400).json({ erro: 'Informe ao menos uma série.' });
+  }
+
+  const treinoExercicio = buscarTreinoExercicio(req.params.id, req.usuario.id);
+
+  if (!treinoExercicio) {
+    return res.status(404).json({ erro: 'Exercício não encontrado.' });
+  }
+
+  for (const r of registros) {
+    const numeroValido = Number.isInteger(r.numeroSerie) && r.numeroSerie >= 1;
+    const cargaValida = typeof r.carga === 'number' && Number.isFinite(r.carga) && r.carga >= 0;
+    const repsValidas = Number.isInteger(r.repeticoes) && r.repeticoes >= 0;
+
+    if (!numeroValido || !cargaValida || !repsValidas) {
+      return res.status(400).json({ erro: 'Cada série precisa de número, carga e repetições válidos.' });
+    }
+  }
+
+  const inserir = db.prepare(`
+    INSERT INTO registros_series (usuario_id, treino_exercicio_id, numero_serie, carga, repeticoes)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+
+  const salvarTodos = db.transaction((lista) => {
+    for (const r of lista) {
+      inserir.run(req.usuario.id, treinoExercicio.id, r.numeroSerie, r.carga, r.repeticoes);
+    }
+  });
+
+  salvarTodos(registros);
+
+  res.status(201).json({ mensagem: 'Registro salvo!' });
+});
+
+app.get('/evolucao/sessoes', verificarToken, (req, res) => {
+  const sessoes = db.prepare(`
+    SELECT s.id, s.nome, t.nome AS treino_nome, t.criadoEm AS treino_criadoEm
+    FROM treino_sessoes s
+    JOIN treinos t ON t.id = s.treino_id
+    WHERE t.usuario_id = ?
+    ORDER BY t.id DESC, s.ordem
+  `).all(req.usuario.id);
+
+  res.json({ sessoes });
+});
+
+app.get('/evolucao/sessoes/:id', verificarToken, (req, res) => {
+  const sessao = db.prepare(`
+    SELECT s.id
+    FROM treino_sessoes s
+    JOIN treinos t ON t.id = s.treino_id
+    WHERE s.id = ? AND t.usuario_id = ?
+  `).get(req.params.id, req.usuario.id);
+
+  if (!sessao) {
+    return res.status(404).json({ erro: 'Sessão não encontrada.' });
+  }
+
+  const exerciciosDaSessao = db.prepare(`
+    SELECT DISTINCT e.id, e.nome, te.ordem
+    FROM treino_exercicios te
+    JOIN exercicios e ON e.id = te.exercicio_id
+    WHERE te.sessao_id = ?
+    ORDER BY te.ordem
+  `).all(sessao.id);
+
+  const buscarRegistros = db.prepare(`
+    SELECT r.registradoEm, r.carga, r.repeticoes
+    FROM registros_series r
+    JOIN treino_exercicios te ON te.id = r.treino_exercicio_id
+    WHERE te.exercicio_id = ? AND r.usuario_id = ?
+    ORDER BY r.registradoEm
+  `);
+
+  const exercicios = exerciciosDaSessao.map((e) => ({
+    id: e.id,
+    nome: e.nome,
+    registros: buscarRegistros.all(e.id, req.usuario.id),
+  }));
+
+  res.json({ exercicios });
 });
 
 app.post('/forgot-password', async (req, res) => {
