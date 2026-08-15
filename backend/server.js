@@ -33,10 +33,7 @@ const transporter = nodemailer.createTransport({
 });
 
 app.use(express.json());
-
-app.get('/', (req, res) => {
-  res.send('Teste');
-});
+app.use(express.static(path.join(__dirname, '..')));
 
 function verificarToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -377,7 +374,8 @@ app.post('/forgot-password', async (req, res) => {
   const update = db.prepare('UPDATE usuarios SET resetToken = ?, resetTokenExpira = ? WHERE email = ?');
   update.run(token, expira, email);
 
-  const link = `http://localhost:5500/redefinir-senha.html?token=${token}`;
+  const baseUrl = process.env.APP_URL || `http://localhost:${PORT}`;
+  const link = `${baseUrl}/redefinir-senha.html?token=${token}`;
 
   try {
     await transporter.sendMail({

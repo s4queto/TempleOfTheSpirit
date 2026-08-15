@@ -52,7 +52,7 @@
             }
 
             try {
-                const resposta = await fetch('http://localhost:3000/login', {
+                const resposta = await fetch('/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, senha })
@@ -82,7 +82,7 @@
             if (!email) return;
 
             try {
-                const resposta = await fetch('http://localhost:3000/forgot-password', {
+                const resposta = await fetch('/forgot-password', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email })
