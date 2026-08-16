@@ -13,13 +13,24 @@ db.exec(`
     senha TEXT NOT NULL,
     resetToken TEXT,
     resetTokenExpira INTEGER,
-    foto TEXT
+    foto TEXT,
+    pesoKg REAL,
+    lembreteAguaAtivo INTEGER NOT NULL DEFAULT 0,
+    lembreteAguaIntervaloMin INTEGER NOT NULL DEFAULT 120
   )
 `);
 
 const colunasUsuarios = db.prepare("PRAGMA table_info(usuarios)").all().map((c) => c.name);
-if (!colunasUsuarios.includes('foto')) {
-  db.exec('ALTER TABLE usuarios ADD COLUMN foto TEXT');
+const colunasNovasUsuarios = {
+  foto: 'TEXT',
+  pesoKg: 'REAL',
+  lembreteAguaAtivo: 'INTEGER NOT NULL DEFAULT 0',
+  lembreteAguaIntervaloMin: 'INTEGER NOT NULL DEFAULT 120',
+};
+for (const [coluna, tipo] of Object.entries(colunasNovasUsuarios)) {
+  if (!colunasUsuarios.includes(coluna)) {
+    db.exec(`ALTER TABLE usuarios ADD COLUMN ${coluna} ${tipo}`);
+  }
 }
 
 db.exec(`
@@ -116,6 +127,39 @@ db.exec(`
     registradoEm TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
     FOREIGN KEY (treino_exercicio_id) REFERENCES treino_exercicios(id) ON DELETE CASCADE
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS garrafinhas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id INTEGER NOT NULL,
+    nome TEXT NOT NULL,
+    ml INTEGER NOT NULL,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS registros_agua (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id INTEGER NOT NULL,
+    ml INTEGER NOT NULL,
+    registradoEm TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS inscricoes_push (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id INTEGER NOT NULL,
+    endpoint TEXT NOT NULL UNIQUE,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    ultimoLembreteEm TEXT,
+    criadoEm TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
   )
 `);
 

@@ -26,6 +26,7 @@
             <a data-secao="treinos" class="ativo"><i class='bx bxs-notepad'></i> Meus treinos</a>
             <a data-secao="novo"><i class='bx bxs-plus-circle'></i> Novo treino</a>
             <a data-secao="evolucao"><i class='bx bxs-chart'></i> Evolução</a>
+            <a data-secao="agua"><i class='bx bxs-droplet'></i> Água</a>
             <a data-secao="info"><i class='bx bxs-info-circle'></i> Mais informações</a>
         </nav>
 
@@ -155,50 +156,178 @@
             <div class="grade-evolucao" id="graficoEvolucao"></div>
         </section>
 
+        <section class="secao" id="secao-agua">
+            <h2 class="titulo">Água</h2>
+            <p class="subtitulo">Acompanhamento de ingestão diária.</p>
+
+            <div class="card">
+                <h3>Meta de hoje</h3>
+                <p class="desc">Calculada em 35ml por kg de peso corporal.</p>
+
+                <div class="progresso-agua">
+                    <div class="progresso-agua-numero">
+                        <strong id="aguaTotalHoje">0</strong>ml
+                        <span id="aguaMetaHoje">/ 0ml</span>
+                    </div>
+                    <div class="barra-progresso">
+                        <div class="barra-progresso-preenchida" id="aguaBarraProgresso"></div>
+                    </div>
+                    <p class="desc" id="aguaGarrafinhasHoje"></p>
+                </div>
+
+                <div class="campo" style="max-width: 160px; margin-top: 16px;">
+                    <label for="aguaPeso">Seu peso (kg)</label>
+                    <input type="number" id="aguaPeso" min="1" step="0.5">
+                </div>
+                <button class="botao secundario" onclick="salvarPesoAgua()">Salvar peso</button>
+                <p class="mensagem" id="msgAguaPeso"></p>
+            </div>
+
+            <div class="card">
+                <h3>Registrar consumo</h3>
+                <p class="desc">Toque numa garrafinha cadastrada ou informe a quantidade.</p>
+
+                <div class="opcoes" id="aguaGarrafinhasBotoes"></div>
+
+                <div class="registro-series" style="margin-top: 16px;">
+                    <div class="linha-serie">
+                        <span>Adicionar</span>
+                        <input type="number" id="aguaMlManual" min="1" placeholder="ml">
+                    </div>
+                    <button class="botao" onclick="adicionarAguaManual()">Adicionar</button>
+                </div>
+
+                <div id="aguaListaHoje" class="lista-agua-hoje"></div>
+            </div>
+
+            <div class="card">
+                <h3>Minhas garrafinhas</h3>
+                <p class="desc">Cadastre os tamanhos que você mais usa.</p>
+
+                <div class="registro-series">
+                    <div class="linha-serie">
+                        <span>Nome</span>
+                        <input type="text" id="novaGarrafinhaNome" placeholder="Ex: Squeeze">
+                    </div>
+                    <div class="linha-serie">
+                        <span>ml</span>
+                        <input type="number" id="novaGarrafinhaMl" min="1" placeholder="500">
+                    </div>
+                    <button class="botao secundario" onclick="salvarGarrafinha()">Cadastrar</button>
+                </div>
+
+                <div id="aguaListaGarrafinhas" class="lista-treinos" style="margin-top: 14px;"></div>
+                <p class="mensagem" id="msgGarrafinha"></p>
+            </div>
+
+            <div class="card">
+                <h3>Lembrete de beber água</h3>
+                <p class="desc">Manda uma notificação enquanto a meta do dia não é batida.</p>
+
+                <div class="campo">
+                    <label for="aguaIntervalo">A cada quantos minutos</label>
+                    <select id="aguaIntervalo">
+                        <option value="60">1 hora</option>
+                        <option value="120" selected>2 horas</option>
+                        <option value="180">3 horas</option>
+                    </select>
+                </div>
+
+                <button class="botao" id="botaoAtivarLembrete" onclick="alternarLembreteAgua()">Ativar lembretes</button>
+                <p class="mensagem" id="msgLembreteAgua"></p>
+            </div>
+
+            <div class="card">
+                <h3>Últimos dias</h3>
+                <div id="aguaHistorico"></div>
+            </div>
+        </section>
+
         <section class="secao" id="secao-info">
             <h2 class="titulo">Mais informações</h2>
             <p class="subtitulo">Conceitos usados na ficha, explicados.</p>
 
-            <div class="card">
-                <h3>Cafeína pré-treino</h3>
-                <p class="desc">
-                    Tomada de 30 a 45 minutos antes de treinar, a cafeína melhora foco e reduz a
-                    percepção de esforço, o que ajuda a levar as séries até a faixa de RIR
-                    prescrita. Uma dose de referência fica em torno de 3 a 6mg por kg de peso
-                    corporal. Evite tomar muito tarde no dia — o efeito estimulante pode atrapalhar
-                    o sono, e sono ruim prejudica a recuperação mais do que a cafeína ajuda no treino.
-                </p>
-            </div>
+            <div class="zigzag">
+                <div class="zigzag-linha" data-reveal>
+                    <div class="zigzag-imagem">
+                        <img src="https://images.unsplash.com/photo-1475241404975-c3ae90fdd9e6?w=1400&q=80&auto=format&fit=crop" alt="Xícara de café" loading="lazy">
+                    </div>
+                    <div class="zigzag-texto">
+                        <h3>Cafeína pré-treino</h3>
+                        <p>
+                            Tomada de 30 a 45 minutos antes de treinar, a cafeína melhora foco e reduz a
+                            percepção de esforço, o que ajuda a levar as séries até a faixa de RIR
+                            prescrita. Uma dose de referência fica em torno de 3 a 6mg por kg de peso
+                            corporal. Evite tomar muito tarde no dia — o efeito estimulante pode
+                            atrapalhar o sono, e sono ruim prejudica a recuperação mais do que a
+                            cafeína ajuda no treino.
+                        </p>
+                    </div>
+                </div>
 
-            <div class="card">
-                <h3>Água</h3>
-                <p class="desc">
-                    A hidratação afeta força, resistência e recuperação — não é só sobre beber
-                    água durante o treino, e sim ao longo do dia inteiro. Desidratação leve já é
-                    suficiente para reduzir o desempenho nas últimas séries de uma sessão.
-                </p>
-            </div>
+                <div class="zigzag-linha" data-reveal>
+                    <div class="zigzag-imagem">
+                        <img src="https://images.unsplash.com/photo-1533230091447-15b7f18b6281?w=1400&q=80&auto=format&fit=crop" alt="Copo de água" loading="lazy">
+                    </div>
+                    <div class="zigzag-texto">
+                        <h3>Água</h3>
+                        <p>
+                            A hidratação afeta força, resistência e recuperação — não é só sobre beber
+                            água durante o treino, e sim ao longo do dia inteiro. Desidratação leve já é
+                            suficiente para reduzir o desempenho nas últimas séries de uma sessão.
+                        </p>
+                    </div>
+                </div>
 
-            <div class="card">
-                <h3>RIR — Reps In Reserve</h3>
-                <p class="desc">
-                    RIR é quantas repetições você ainda conseguiria fazer antes de falhar. A ficha
-                    usa a faixa <strong>1/0</strong>: terminar a série com 1 repetição de reserva
-                    ou levar até a falha técnica. É perto da falha, mas não é sempre a falha total
-                    — isso mantém a intensidade alta sem acumular fadiga demais para se recuperar
-                    a tempo da próxima sessão.
-                </p>
-            </div>
+                <div class="zigzag-linha" data-reveal>
+                    <div class="zigzag-imagem">
+                        <img src="https://images.unsplash.com/photo-1543352632-5a4b24e4d2a6?w=1400&q=80&auto=format&fit=crop" alt="Marmitas com comida saudável" loading="lazy">
+                    </div>
+                    <div class="zigzag-texto">
+                        <h3>Déficit calórico</h3>
+                        <p>
+                            Perder gordura depende de gastar mais calorias do que se consome — o
+                            déficit calórico. Um déficit moderado, em torno de 15% a 20% abaixo da
+                            manutenção, costuma preservar mais massa muscular do que cortes
+                            agressivos. Treino de força no déficit é o que sinaliza pro corpo manter
+                            o músculo mesmo perdendo peso; sem estímulo, parte do peso perdido vem
+                            de músculo, não só de gordura. Déficit grande demais também prejudica
+                            a recuperação entre as sessões.
+                        </p>
+                    </div>
+                </div>
 
-            <div class="card">
-                <h3>Séries PAP</h3>
-                <p class="desc">
-                    PAP (Potenciação Pós-Ativação) é o princípio por trás de fazer uma série bem
-                    intensa — perto da falha, com carga alta ou baixa velocidade — pouco antes de
-                    outra série do mesmo padrão de movimento. A ativação nervosa da primeira série
-                    deixa o músculo temporariamente mais forte na série seguinte, permitindo mais
-                    carga ou mais repetições do que sozinha.
-                </p>
+                <div class="zigzag-linha" data-reveal>
+                    <div class="zigzag-imagem">
+                        <img src="https://images.unsplash.com/photo-1772450014666-083b1a23f6a1?w=1400&q=80&auto=format&fit=crop" alt="Levantamento de peso pesado" loading="lazy">
+                    </div>
+                    <div class="zigzag-texto">
+                        <h3>RIR — Reps In Reserve</h3>
+                        <p>
+                            RIR é quantas repetições você ainda conseguiria fazer antes de falhar. A
+                            ficha usa a faixa <strong>1/0</strong>: terminar a série com 1 repetição de
+                            reserva ou levar até a falha técnica. É perto da falha, mas não é sempre a
+                            falha total — isso mantém a intensidade alta sem acumular fadiga demais
+                            para se recuperar a tempo da próxima sessão.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="zigzag-linha" data-reveal>
+                    <div class="zigzag-imagem">
+                        <img src="https://images.unsplash.com/photo-1758875570127-b6ff35e42436?w=1400&q=80&auto=format&fit=crop" alt="Movimento explosivo com kettlebell" loading="lazy">
+                    </div>
+                    <div class="zigzag-texto">
+                        <h3>Séries PAP</h3>
+                        <p>
+                            PAP (Potenciação Pós-Ativação) é o princípio por trás de fazer uma série
+                            bem intensa — perto da falha, com carga alta ou baixa velocidade — pouco
+                            antes de outra série do mesmo padrão de movimento. A ativação nervosa da
+                            primeira série deixa o músculo temporariamente mais forte na série
+                            seguinte, permitindo mais carga ou mais repetições do que sozinha.
+                        </p>
+                    </div>
+                </div>
             </div>
 
             <p class="creditos">
@@ -225,6 +354,8 @@
 
             if (nome === 'treinos') carregarTreinos();
             if (nome === 'evolucao') carregarEvolucao();
+            if (nome === 'agua') carregarAgua();
+            if (nome === 'info') observarZigzag();
         }
 
         document.querySelectorAll('.menu nav a').forEach((a) => {
@@ -644,6 +775,272 @@
             bonecosAtivos = [];
             document.getElementById('fichaAberta').innerHTML = '';
             carregarTreinos();
+        }
+
+        let observadorZigzag = null;
+
+        function observarZigzag() {
+            if (!observadorZigzag) {
+                observadorZigzag = new IntersectionObserver((entradas) => {
+                    entradas.forEach((entrada) => {
+                        if (entrada.isIntersecting) entrada.target.classList.add('visivel');
+                    });
+                }, { threshold: 0.15 });
+            }
+
+            document.querySelectorAll('.zigzag-linha[data-reveal]').forEach((el) => {
+                observadorZigzag.observe(el);
+            });
+        }
+
+        let aguaCache = null;
+
+        async function carregarAgua() {
+            const resposta = await chamarApi('/agua/hoje');
+            if (!resposta) return;
+
+            aguaCache = await resposta.json();
+
+            document.getElementById('aguaPeso').value = aguaCache.pesoKg || '';
+            document.getElementById('aguaIntervalo').value = aguaCache.lembreteIntervaloMin;
+
+            const botao = document.getElementById('botaoAtivarLembrete');
+            botao.textContent = aguaCache.lembreteAtivo ? 'Desativar lembretes' : 'Ativar lembretes';
+            botao.className = aguaCache.lembreteAtivo ? 'botao perigo' : 'botao';
+
+            renderizarProgressoAgua();
+            renderizarGarrafinhas();
+            renderizarListaHoje();
+            carregarHistoricoAgua();
+        }
+
+        function renderizarProgressoAgua() {
+            const { totalMl, metaMl, garrafinhas } = aguaCache;
+            const percentual = Math.min(100, Math.round((totalMl / metaMl) * 100));
+
+            document.getElementById('aguaTotalHoje').textContent = totalMl;
+            document.getElementById('aguaMetaHoje').textContent = `/ ${metaMl}ml`;
+            document.getElementById('aguaBarraProgresso').style.width = percentual + '%';
+
+            const menorGarrafinha = [...garrafinhas].sort((a, b) => a.ml - b.ml)[0];
+            document.getElementById('aguaGarrafinhasHoje').textContent = menorGarrafinha
+                ? `≈ ${(totalMl / menorGarrafinha.ml).toFixed(1)} garrafinhas de ${menorGarrafinha.nome} hoje`
+                : '';
+        }
+
+        function renderizarGarrafinhas() {
+            const botoes = document.getElementById('aguaGarrafinhasBotoes');
+            const lista = document.getElementById('aguaListaGarrafinhas');
+
+            if (aguaCache.garrafinhas.length === 0) {
+                botoes.innerHTML = '<p class="desc">Nenhuma garrafinha cadastrada ainda.</p>';
+                lista.innerHTML = '<div class="vazio">Cadastre sua primeira garrafinha abaixo.</div>';
+                return;
+            }
+
+            botoes.innerHTML = aguaCache.garrafinhas.map((g) => `
+                <div class="opcao" onclick="adicionarAgua(${g.ml})">${escapar(g.nome)}<small>${g.ml}ml</small></div>
+            `).join('');
+
+            lista.innerHTML = aguaCache.garrafinhas.map((g) => `
+                <div class="item">
+                    <div>
+                        <h4>${escapar(g.nome)}</h4>
+                        <p>${g.ml}ml</p>
+                    </div>
+                    <div class="acoes">
+                        <button class="botao perigo" onclick="removerGarrafinha(${g.id})">Excluir</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderizarListaHoje() {
+            const lista = document.getElementById('aguaListaHoje');
+
+            if (aguaCache.registros.length === 0) {
+                lista.innerHTML = '<div class="vazio">Nenhum registro hoje ainda.</div>';
+                return;
+            }
+
+            lista.innerHTML = aguaCache.registros.map((r) => `
+                <div class="item">
+                    <div>
+                        <p>${r.ml}ml · ${escapar(r.registradoEm.slice(11, 16))}</p>
+                    </div>
+                    <div class="acoes">
+                        <button class="botao perigo" onclick="removerRegistroAgua(${r.id})">Excluir</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function adicionarAgua(ml) {
+            const resposta = await chamarApi('/agua/registros', {
+                method: 'POST',
+                body: JSON.stringify({ ml })
+            });
+            if (!resposta) return;
+            if (resposta.ok) carregarAgua();
+        }
+
+        function adicionarAguaManual() {
+            const campo = document.getElementById('aguaMlManual');
+            const ml = Number(campo.value);
+            if (!ml || ml <= 0) return;
+            campo.value = '';
+            adicionarAgua(ml);
+        }
+
+        async function removerRegistroAgua(id) {
+            const resposta = await chamarApi('/agua/registros/' + id, { method: 'DELETE' });
+            if (!resposta) return;
+            if (resposta.ok) carregarAgua();
+        }
+
+        async function salvarPesoAgua() {
+            const pesoKg = Number(document.getElementById('aguaPeso').value);
+            const msg = document.getElementById('msgAguaPeso');
+
+            if (!pesoKg || pesoKg <= 0) {
+                msg.textContent = 'Informe um peso válido.';
+                msg.className = 'mensagem erro';
+                return;
+            }
+
+            const resposta = await chamarApi('/agua/configuracao', {
+                method: 'PUT',
+                body: JSON.stringify({ pesoKg })
+            });
+            if (!resposta) return;
+
+            const dados = await resposta.json();
+            msg.textContent = resposta.ok ? dados.mensagem : dados.erro;
+            msg.className = 'mensagem ' + (resposta.ok ? 'ok' : 'erro');
+            if (resposta.ok) carregarAgua();
+        }
+
+        async function salvarGarrafinha() {
+            const nome = document.getElementById('novaGarrafinhaNome').value;
+            const ml = Number(document.getElementById('novaGarrafinhaMl').value);
+            const msg = document.getElementById('msgGarrafinha');
+
+            const resposta = await chamarApi('/agua/garrafinhas', {
+                method: 'POST',
+                body: JSON.stringify({ nome, ml })
+            });
+            if (!resposta) return;
+
+            const dados = await resposta.json();
+            if (resposta.ok) {
+                document.getElementById('novaGarrafinhaNome').value = '';
+                document.getElementById('novaGarrafinhaMl').value = '';
+                msg.textContent = '';
+                carregarAgua();
+            } else {
+                msg.textContent = dados.erro;
+                msg.className = 'mensagem erro';
+            }
+        }
+
+        async function removerGarrafinha(id) {
+            const resposta = await chamarApi('/agua/garrafinhas/' + id, { method: 'DELETE' });
+            if (!resposta) return;
+            if (resposta.ok) carregarAgua();
+        }
+
+        async function carregarHistoricoAgua() {
+            const resposta = await chamarApi('/agua/historico');
+            if (!resposta) return;
+
+            const { dias } = await resposta.json();
+            const alvo = document.getElementById('aguaHistorico');
+
+            const hoje = new Date().toISOString().slice(0, 10);
+            const diasSemHoje = dias.filter((d) => d.dia !== hoje);
+
+            if (diasSemHoje.length === 0) {
+                alvo.innerHTML = '<div class="vazio">Ainda não há histórico de dias anteriores.</div>';
+                return;
+            }
+
+            alvo.innerHTML = '<div class="lista-treinos">' + diasSemHoje.map((d) => `
+                <div class="item">
+                    <div>
+                        <h4>${formatarData(d.dia)}</h4>
+                        <p>${d.totalMl}ml · ${d.quantidade} registro(s)</p>
+                    </div>
+                </div>
+            `).join('') + '</div>';
+        }
+
+        function urlBase64ParaUint8Array(base64) {
+            const padding = '='.repeat((4 - (base64.length % 4)) % 4);
+            const base64Normalizada = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const bruto = atob(base64Normalizada);
+            return Uint8Array.from([...bruto].map((c) => c.charCodeAt(0)));
+        }
+
+        async function alternarLembreteAgua() {
+            const msg = document.getElementById('msgLembreteAgua');
+
+            if (aguaCache.lembreteAtivo) {
+                const registro = await navigator.serviceWorker.getRegistration();
+                const inscricao = registro && await registro.pushManager.getSubscription();
+                if (inscricao) {
+                    await chamarApi('/push/inscrever', { method: 'DELETE', body: JSON.stringify({ endpoint: inscricao.endpoint }) });
+                    await inscricao.unsubscribe();
+                }
+                await chamarApi('/agua/configuracao', { method: 'PUT', body: JSON.stringify({ lembreteAtivo: false }) });
+                msg.textContent = 'Lembretes desativados.';
+                msg.className = 'mensagem';
+                carregarAgua();
+                return;
+            }
+
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                msg.textContent = 'Seu navegador não suporta notificações.';
+                msg.className = 'mensagem erro';
+                return;
+            }
+
+            try {
+                const permissao = await Notification.requestPermission();
+                if (permissao !== 'granted') {
+                    msg.textContent = 'Permissão de notificação negada.';
+                    msg.className = 'mensagem erro';
+                    return;
+                }
+
+                const chaveResposta = await chamarApi('/push/chave-publica');
+                const { chave } = await chaveResposta.json();
+                if (!chave) {
+                    msg.textContent = 'Notificações não configuradas no servidor.';
+                    msg.className = 'mensagem erro';
+                    return;
+                }
+
+                const registro = await navigator.serviceWorker.register('sw.js');
+                const inscricao = await registro.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ParaUint8Array(chave),
+                });
+
+                await chamarApi('/push/inscrever', { method: 'POST', body: JSON.stringify(inscricao.toJSON()) });
+
+                const intervaloMin = Number(document.getElementById('aguaIntervalo').value);
+                await chamarApi('/agua/configuracao', {
+                    method: 'PUT',
+                    body: JSON.stringify({ lembreteAtivo: true, lembreteIntervaloMin: intervaloMin })
+                });
+
+                msg.textContent = 'Lembretes ativados!';
+                msg.className = 'mensagem ok';
+                carregarAgua();
+            } catch (erro) {
+                msg.textContent = 'Não deu para ativar as notificações.';
+                msg.className = 'mensagem erro';
+            }
         }
 
         iniciar();

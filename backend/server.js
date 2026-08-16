@@ -11,11 +11,20 @@ const db = require('./database');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const webpush = require('web-push');
 const { gerarTreino } = require('./gerador');
 
 if (!process.env.JWT_SECRET) {
   console.error('ERRO: JWT_SECRET não definido. Copie backend/.env.example para backend/.env e preencha os valores.');
   process.exit(1);
+}
+
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    'mailto:contato@example.com',
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
 }
 
 const app = express();
@@ -469,6 +478,215 @@ app.get('/evolucao/sessoes/:id', verificarToken, (req, res) => {
 
   res.json({ exercicios });
 });
+
+function metaAguaMl(pesoKg) {
+  return Math.round((pesoKg || 70) * 35);
+}
+
+app.get('/agua/hoje', verificarToken, (req, res) => {
+  const usuario = db.prepare(
+    'SELECT pesoKg, lembreteAguaAtivo, lembreteAguaIntervaloMin FROM usuarios WHERE id = ?'
+  ).get(req.usuario.id);
+
+  const registros = db.prepare(`
+    SELECT id, ml, registradoEm
+    FROM registros_agua
+    WHERE usuario_id = ? AND date(registradoEm) = date('now', 'localtime')
+    ORDER BY registradoEm DESC
+  `).all(req.usuario.id);
+
+  const garrafinhas = db.prepare(
+    'SELECT id, nome, ml FROM garrafinhas WHERE usuario_id = ? ORDER BY ml'
+  ).all(req.usuario.id);
+
+  const totalMl = registros.reduce((soma, r) => soma + r.ml, 0);
+
+  res.json({
+    registros,
+    garrafinhas,
+    totalMl,
+    metaMl: metaAguaMl(usuario.pesoKg),
+    pesoKg: usuario.pesoKg,
+    lembreteAtivo: !!usuario.lembreteAguaAtivo,
+    lembreteIntervaloMin: usuario.lembreteAguaIntervaloMin,
+  });
+});
+
+app.get('/agua/historico', verificarToken, (req, res) => {
+  const dias = db.prepare(`
+    SELECT date(registradoEm) AS dia, SUM(ml) AS totalMl, COUNT(*) AS quantidade
+    FROM registros_agua
+    WHERE usuario_id = ? AND registradoEm >= datetime('now', 'localtime', '-13 days', 'start of day')
+    GROUP BY dia
+    ORDER BY dia DESC
+  `).all(req.usuario.id);
+
+  res.json({ dias });
+});
+
+app.post('/agua/registros', verificarToken, (req, res) => {
+  const { ml } = req.body;
+
+  if (!Number.isFinite(ml) || ml <= 0) {
+    return res.status(400).json({ erro: 'Informe uma quantidade válida.' });
+  }
+
+  const resultado = db.prepare(
+    'INSERT INTO registros_agua (usuario_id, ml) VALUES (?, ?)'
+  ).run(req.usuario.id, Math.round(ml));
+
+  res.status(201).json({ mensagem: 'Registrado!', id: resultado.lastInsertRowid });
+});
+
+app.delete('/agua/registros/:id', verificarToken, (req, res) => {
+  const resultado = db.prepare(
+    'DELETE FROM registros_agua WHERE id = ? AND usuario_id = ?'
+  ).run(req.params.id, req.usuario.id);
+
+  if (resultado.changes === 0) {
+    return res.status(404).json({ erro: 'Registro não encontrado.' });
+  }
+
+  res.json({ mensagem: 'Removido!' });
+});
+
+app.post('/agua/garrafinhas', verificarToken, (req, res) => {
+  const { nome, ml } = req.body;
+
+  if (!nome || !Number.isFinite(ml) || ml <= 0) {
+    return res.status(400).json({ erro: 'Informe nome e quantidade válidos.' });
+  }
+
+  const resultado = db.prepare(
+    'INSERT INTO garrafinhas (usuario_id, nome, ml) VALUES (?, ?, ?)'
+  ).run(req.usuario.id, nome, Math.round(ml));
+
+  res.status(201).json({ mensagem: 'Garrafinha cadastrada!', id: resultado.lastInsertRowid });
+});
+
+app.delete('/agua/garrafinhas/:id', verificarToken, (req, res) => {
+  const resultado = db.prepare(
+    'DELETE FROM garrafinhas WHERE id = ? AND usuario_id = ?'
+  ).run(req.params.id, req.usuario.id);
+
+  if (resultado.changes === 0) {
+    return res.status(404).json({ erro: 'Garrafinha não encontrada.' });
+  }
+
+  res.json({ mensagem: 'Removida!' });
+});
+
+app.put('/agua/configuracao', verificarToken, (req, res) => {
+  const { pesoKg, lembreteAtivo, lembreteIntervaloMin } = req.body;
+
+  if (pesoKg != null && (!Number.isFinite(pesoKg) || pesoKg <= 0)) {
+    return res.status(400).json({ erro: 'Peso inválido.' });
+  }
+
+  if (lembreteIntervaloMin != null && (!Number.isInteger(lembreteIntervaloMin) || lembreteIntervaloMin < 15)) {
+    return res.status(400).json({ erro: 'Intervalo do lembrete inválido.' });
+  }
+
+  db.prepare(`
+    UPDATE usuarios
+    SET pesoKg = COALESCE(?, pesoKg),
+        lembreteAguaAtivo = COALESCE(?, lembreteAguaAtivo),
+        lembreteAguaIntervaloMin = COALESCE(?, lembreteAguaIntervaloMin)
+    WHERE id = ?
+  `).run(
+    pesoKg ?? null,
+    lembreteAtivo === undefined ? null : (lembreteAtivo ? 1 : 0),
+    lembreteIntervaloMin ?? null,
+    req.usuario.id
+  );
+
+  res.json({ mensagem: 'Configuração salva!' });
+});
+
+app.get('/push/chave-publica', verificarToken, (req, res) => {
+  res.json({ chave: process.env.VAPID_PUBLIC_KEY || null });
+});
+
+app.post('/push/inscrever', verificarToken, (req, res) => {
+  const { endpoint, keys } = req.body;
+
+  if (!endpoint || !keys || !keys.p256dh || !keys.auth) {
+    return res.status(400).json({ erro: 'Inscrição de notificação inválida.' });
+  }
+
+  db.prepare(`
+    INSERT INTO inscricoes_push (usuario_id, endpoint, p256dh, auth)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(endpoint) DO UPDATE SET usuario_id = excluded.usuario_id, p256dh = excluded.p256dh, auth = excluded.auth
+  `).run(req.usuario.id, endpoint, keys.p256dh, keys.auth);
+
+  res.status(201).json({ mensagem: 'Inscrito para notificações!' });
+});
+
+app.delete('/push/inscrever', verificarToken, (req, res) => {
+  const { endpoint } = req.body;
+
+  db.prepare('DELETE FROM inscricoes_push WHERE endpoint = ? AND usuario_id = ?')
+    .run(endpoint, req.usuario.id);
+
+  res.json({ mensagem: 'Inscrição removida.' });
+});
+
+async function checarLembretesDeAgua() {
+  if (!process.env.VAPID_PUBLIC_KEY) return;
+
+  const horaLocal = Number(new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', hour12: false }).format(new Date()));
+  if (horaLocal < 7 || horaLocal >= 22) return;
+
+  const usuarios = db.prepare(`
+    SELECT id, pesoKg, lembreteAguaIntervaloMin
+    FROM usuarios
+    WHERE lembreteAguaAtivo = 1
+  `).all();
+
+  for (const usuario of usuarios) {
+    const totalHoje = db.prepare(`
+      SELECT COALESCE(SUM(ml), 0) AS total
+      FROM registros_agua
+      WHERE usuario_id = ? AND date(registradoEm) = date('now', 'localtime')
+    `).get(usuario.id).total;
+
+    if (totalHoje >= metaAguaMl(usuario.pesoKg)) continue;
+
+    const inscricoes = db.prepare(
+      'SELECT * FROM inscricoes_push WHERE usuario_id = ?'
+    ).all(usuario.id);
+
+    for (const inscricao of inscricoes) {
+      if (inscricao.ultimoLembreteEm) {
+        const minutosDesde = (Date.now() - new Date(inscricao.ultimoLembreteEm + 'Z').getTime()) / 60000;
+        if (minutosDesde < usuario.lembreteAguaIntervaloMin) continue;
+      }
+
+      const payload = JSON.stringify({
+        titulo: 'Hora de beber água 💧',
+        corpo: `Você já bebeu ${totalHoje}ml hoje. Faltam ${metaAguaMl(usuario.pesoKg) - totalHoje}ml para a meta.`,
+      });
+
+      try {
+        await webpush.sendNotification(
+          { endpoint: inscricao.endpoint, keys: { p256dh: inscricao.p256dh, auth: inscricao.auth } },
+          payload
+        );
+        db.prepare('UPDATE inscricoes_push SET ultimoLembreteEm = datetime(\'now\', \'localtime\') WHERE id = ?')
+          .run(inscricao.id);
+      } catch (erro) {
+        if (erro.statusCode === 404 || erro.statusCode === 410) {
+          db.prepare('DELETE FROM inscricoes_push WHERE id = ?').run(inscricao.id);
+        } else {
+          console.error('Erro ao enviar notificação:', erro.message);
+        }
+      }
+    }
+  }
+}
+
+setInterval(checarLembretesDeAgua, 10 * 60 * 1000);
 
 app.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
