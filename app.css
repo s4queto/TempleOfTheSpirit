@@ -427,7 +427,7 @@ td.prescricao {
 .zigzag-linha {
     display: flex;
     align-items: center;
-    gap: 52px;
+    gap: 100px;
     opacity: 0;
     transform: translateY(36px);
     transition: opacity .7s ease, transform .7s ease;
