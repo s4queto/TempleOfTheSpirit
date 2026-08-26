@@ -291,8 +291,14 @@ body {
     opacity: .9;
 }
 
+.tabela-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
 table {
     width: 100%;
+    min-width: 640px;
     border-collapse: collapse;
 }
 

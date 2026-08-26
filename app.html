@@ -568,44 +568,46 @@
                         <div class="boneco" data-slugs="${[...new Set(s.exercicios.map((e) => e.agrupamento))].join(',')}"></div>
                         <p class="boneco-legenda">Músculos trabalhados nesta sessão</p>
                     </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th>Exercício</th>
-                                <th>Séries</th>
-                                <th>Reps</th>
-                                <th>RIR</th>
-                                <th>Observação</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${s.exercicios.map((e) => `
+                    <div class="tabela-wrap">
+                        <table>
+                            <thead>
                                 <tr>
-                                    <td class="numero">${e.ordem + 1}</td>
-                                    <td>
-                                        ${escapar(e.nome)}
-                                        <span class="alvo">${escapar(e.agrupamento_nome)}</span>
-                                    </td>
-                                    <td class="prescricao">${e.series}</td>
-                                    <td class="prescricao">${escapar(e.reps)}</td>
-                                    <td class="prescricao">${escapar(e.rir)}</td>
-                                    <td>${escapar(e.observacao || '—')}</td>
-                                    <td><button class="botao secundario botao-pequeno" onclick="toggleRegistro(${e.treino_exercicio_id})">Registrar</button></td>
+                                    <th></th>
+                                    <th>Exercício</th>
+                                    <th>Séries</th>
+                                    <th>Reps</th>
+                                    <th>RIR</th>
+                                    <th>Observação</th>
+                                    <th></th>
                                 </tr>
-                                <tr class="linha-registro" id="registro-${e.treino_exercicio_id}" style="display: none;">
-                                    <td colspan="7">
-                                        <div class="registro-series" id="registroSeries-${e.treino_exercicio_id}">
-                                            ${camposSeries(e.series)}
-                                        </div>
-                                        <button class="botao" onclick="salvarRegistro(${e.treino_exercicio_id})">Salvar série</button>
-                                        <p class="mensagem" id="msgRegistro-${e.treino_exercicio_id}"></p>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                ${s.exercicios.map((e) => `
+                                    <tr>
+                                        <td class="numero">${e.ordem + 1}</td>
+                                        <td>
+                                            ${escapar(e.nome)}
+                                            <span class="alvo">${escapar(e.agrupamento_nome)}</span>
+                                        </td>
+                                        <td class="prescricao">${e.series}</td>
+                                        <td class="prescricao">${escapar(e.reps)}</td>
+                                        <td class="prescricao">${escapar(e.rir)}</td>
+                                        <td>${escapar(e.observacao || '—')}</td>
+                                        <td><button class="botao secundario botao-pequeno" onclick="toggleRegistro(${e.treino_exercicio_id})">Registrar</button></td>
+                                    </tr>
+                                    <tr class="linha-registro" id="registro-${e.treino_exercicio_id}" style="display: none;">
+                                        <td colspan="7">
+                                            <div class="registro-series" id="registroSeries-${e.treino_exercicio_id}">
+                                                ${camposSeries(e.series)}
+                                            </div>
+                                            <button class="botao" onclick="salvarRegistro(${e.treino_exercicio_id})">Salvar série</button>
+                                            <p class="mensagem" id="msgRegistro-${e.treino_exercicio_id}"></p>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             `).join('');
 
