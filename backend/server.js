@@ -37,7 +37,7 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.set('trust proxy', 1);
+app.set('trust proxy', true);
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
