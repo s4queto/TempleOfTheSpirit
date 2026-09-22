@@ -3,11 +3,13 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 const jwt = require('jsonwebtoken');
 
 const express = require('express');
-const db = require('./database');
+const { pool, inicializarBanco } = require('./database');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
@@ -16,6 +18,11 @@ const { gerarTreino } = require('./gerador');
 
 if (!process.env.JWT_SECRET) {
   console.error('ERRO: JWT_SECRET não definido. Copie backend/.env.example para backend/.env e preencha os valores.');
+  process.exit(1);
+}
+
+if (!process.env.DATABASE_URL) {
+  console.error('ERRO: DATABASE_URL não definido. Preencha backend/.env com a connection string do Supabase.');
   process.exit(1);
 }
 
@@ -28,9 +35,33 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
 }
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+app.set('trust proxy', 1);
+app.use(helmet());
+
+const origensPermitidas = [
+  process.env.APP_URL,
+  `http://localhost:${PORT}`,
+  `http://127.0.0.1:${PORT}`,
+].filter(Boolean);
+
+app.use(cors({
+  origin(origem, callback) {
+    if (!origem || origensPermitidas.includes(origem)) {
+      return callback(null, true);
+    }
+    return callback(null, false);
+  },
+}));
+
+const limitadorLogin = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { erro: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
+});
 
 
 const transporter = nodemailer.createTransport({
@@ -63,18 +94,24 @@ function verificarToken(req, res, next) {
   }
 }
 
-app.post('/register', async (req, res) => {
+const FUSO = 'America/Sao_Paulo';
+const HOJE_LOCAL = `(now() AT TIME ZONE '${FUSO}')::date`;
+
+app.post('/register', limitadorLogin, async (req, res) => {
   const { nome, email, senha } = req.body;
 
   if (!nome || !email || !senha) {
     return res.status(400).json({ erro: 'Preencha todos os campos.' });
   }
 
+  if (senha.length < 8) {
+    return res.status(400).json({ erro: 'A senha deve ter no mínimo 8 caracteres.' });
+  }
+
   try {
     const senhaCriptografada = await bcrypt.hash(senha, 10);
 
-    const stmt = db.prepare('INSERT INTO usuarios (nome, email, senha) VALUES (?, ?, ?)');
-    stmt.run(nome, email, senhaCriptografada);
+    await pool.query('INSERT INTO usuarios (nome, email, senha) VALUES ($1, $2, $3)', [nome, email, senhaCriptografada]);
 
     res.json({ mensagem: 'Usuário cadastrado com sucesso!' });
 
@@ -83,15 +120,15 @@ app.post('/register', async (req, res) => {
   }
 });
 
-app.post('/login', async (req, res) => {
+app.post('/login', limitadorLogin, async (req, res) => {
   const { email, senha } = req.body;
 
   if (!email || !senha) {
     return res.status(400).json({ erro: 'Preencha e-mail e senha.' });
   }
 
-  const stmt = db.prepare('SELECT * FROM usuarios WHERE email = ?');
-  const usuario = stmt.get(email);
+  const { rows } = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);
+  const usuario = rows[0];
 
   if (!usuario) {
     return res.status(401).json({ erro: 'Usuário ou senha inválidos.' });
@@ -113,9 +150,9 @@ app.post('/login', async (req, res) => {
   res.json({ mensagem: 'Login realizado com sucesso!', nome: usuario.nome, token });
 });
 
-app.get('/perfil', verificarToken, (req, res) => {
-  const stmt = db.prepare('SELECT id, nome, email, foto FROM usuarios WHERE id = ?');
-  const usuario = stmt.get(req.usuario.id);
+app.get('/perfil', verificarToken, async (req, res) => {
+  const { rows } = await pool.query('SELECT id, nome, email, foto FROM usuarios WHERE id = $1', [req.usuario.id]);
+  const usuario = rows[0];
 
   if (!usuario) {
     return res.status(404).json({ erro: 'Usuário não encontrado.' });
@@ -124,25 +161,25 @@ app.get('/perfil', verificarToken, (req, res) => {
   res.json({ usuario });
 });
 
-app.put('/perfil/foto', verificarToken, (req, res) => {
+app.put('/perfil/foto', verificarToken, async (req, res) => {
   const { foto } = req.body;
 
-  if (!foto || !foto.startsWith('data:image/')) {
+  if (!foto || !/^data:image\/(png|jpe?g|gif|webp);base64,[A-Za-z0-9+/]+=*$/.test(foto)) {
     return res.status(400).json({ erro: 'Envie uma imagem válida.' });
   }
 
-  db.prepare('UPDATE usuarios SET foto = ? WHERE id = ?').run(foto, req.usuario.id);
+  await pool.query('UPDATE usuarios SET foto = $1 WHERE id = $2', [foto, req.usuario.id]);
 
   res.json({ mensagem: 'Foto atualizada!' });
 });
 
-app.delete('/perfil/foto', verificarToken, (req, res) => {
-  db.prepare('UPDATE usuarios SET foto = NULL WHERE id = ?').run(req.usuario.id);
+app.delete('/perfil/foto', verificarToken, async (req, res) => {
+  await pool.query('UPDATE usuarios SET foto = NULL WHERE id = $1', [req.usuario.id]);
 
   res.json({ mensagem: 'Foto removida!' });
 });
 
-app.put('/perfil', verificarToken, (req, res) => {
+app.put('/perfil', verificarToken, async (req, res) => {
   const { nome, email } = req.body;
 
   if (!nome || !email) {
@@ -150,8 +187,7 @@ app.put('/perfil', verificarToken, (req, res) => {
   }
 
   try {
-    const update = db.prepare('UPDATE usuarios SET nome = ?, email = ? WHERE id = ?');
-    update.run(nome, email, req.usuario.id);
+    await pool.query('UPDATE usuarios SET nome = $1, email = $2 WHERE id = $3', [nome, email, req.usuario.id]);
 
     res.json({ mensagem: 'Perfil atualizado com sucesso!', usuario: { nome, email } });
 
@@ -171,8 +207,8 @@ app.put('/alterar-senha', verificarToken, async (req, res) => {
     return res.status(400).json({ erro: 'A nova senha deve ter no mínimo 6 caracteres.' });
   }
 
-  const stmt = db.prepare('SELECT * FROM usuarios WHERE id = ?');
-  const usuario = stmt.get(req.usuario.id);
+  const { rows } = await pool.query('SELECT * FROM usuarios WHERE id = $1', [req.usuario.id]);
+  const usuario = rows[0];
 
   if (!usuario) {
     return res.status(404).json({ erro: 'Usuário não encontrado.' });
@@ -186,181 +222,181 @@ app.put('/alterar-senha', verificarToken, async (req, res) => {
 
   const senhaCriptografada = await bcrypt.hash(novaSenha, 10);
 
-  const update = db.prepare('UPDATE usuarios SET senha = ? WHERE id = ?');
-  update.run(senhaCriptografada, req.usuario.id);
+  await pool.query('UPDATE usuarios SET senha = $1 WHERE id = $2', [senhaCriptografada, req.usuario.id]);
 
   res.json({ mensagem: 'Senha alterada com sucesso!' });
 });
 
-app.get('/tarefas', verificarToken, (req, res) => {
-  const stmt = db.prepare(
-    'SELECT * FROM tarefas WHERE usuario_id = ? ORDER BY concluida, id DESC'
+app.get('/tarefas', verificarToken, async (req, res) => {
+  const { rows: tarefas } = await pool.query(
+    'SELECT * FROM tarefas WHERE usuario_id = $1 ORDER BY concluida, id DESC',
+    [req.usuario.id]
   );
-  const tarefas = stmt.all(req.usuario.id);
 
   res.json({ tarefas });
 });
 
-app.post('/tarefas', verificarToken, (req, res) => {
+app.post('/tarefas', verificarToken, async (req, res) => {
   const { titulo, descricao } = req.body;
 
   if (!titulo) {
     return res.status(400).json({ erro: 'Informe o título da tarefa.' });
   }
 
-  const stmt = db.prepare(
-    'INSERT INTO tarefas (usuario_id, titulo, descricao) VALUES (?, ?, ?)'
+  const { rows } = await pool.query(
+    'INSERT INTO tarefas (usuario_id, titulo, descricao) VALUES ($1, $2, $3) RETURNING *',
+    [req.usuario.id, titulo, descricao || null]
   );
-  const resultado = stmt.run(req.usuario.id, titulo, descricao || null);
 
-  const criada = db.prepare('SELECT * FROM tarefas WHERE id = ?').get(resultado.lastInsertRowid);
-
-  res.status(201).json({ mensagem: 'Tarefa criada!', tarefa: criada });
+  res.status(201).json({ mensagem: 'Tarefa criada!', tarefa: rows[0] });
 });
 
-app.put('/tarefas/:id', verificarToken, (req, res) => {
+app.put('/tarefas/:id', verificarToken, async (req, res) => {
   const { titulo, descricao, concluida } = req.body;
 
   if (!titulo) {
     return res.status(400).json({ erro: 'Informe o título da tarefa.' });
   }
 
-  const stmt = db.prepare(
-    'UPDATE tarefas SET titulo = ?, descricao = ?, concluida = ? WHERE id = ? AND usuario_id = ?'
-  );
-  const resultado = stmt.run(
-    titulo,
-    descricao || null,
-    concluida ? 1 : 0,
-    req.params.id,
-    req.usuario.id
+  const resultado = await pool.query(
+    'UPDATE tarefas SET titulo = $1, descricao = $2, concluida = $3 WHERE id = $4 AND usuario_id = $5 RETURNING *',
+    [titulo, descricao || null, concluida ? 1 : 0, req.params.id, req.usuario.id]
   );
 
-  if (resultado.changes === 0) {
+  if (resultado.rowCount === 0) {
     return res.status(404).json({ erro: 'Tarefa não encontrada.' });
   }
 
-  const atualizada = db.prepare('SELECT * FROM tarefas WHERE id = ?').get(req.params.id);
-
-  res.json({ mensagem: 'Tarefa atualizada!', tarefa: atualizada });
+  res.json({ mensagem: 'Tarefa atualizada!', tarefa: resultado.rows[0] });
 });
 
-app.delete('/tarefas/:id', verificarToken, (req, res) => {
-  const stmt = db.prepare('DELETE FROM tarefas WHERE id = ? AND usuario_id = ?');
-  const resultado = stmt.run(req.params.id, req.usuario.id);
+app.delete('/tarefas/:id', verificarToken, async (req, res) => {
+  const resultado = await pool.query(
+    'DELETE FROM tarefas WHERE id = $1 AND usuario_id = $2',
+    [req.params.id, req.usuario.id]
+  );
 
-  if (resultado.changes === 0) {
+  if (resultado.rowCount === 0) {
     return res.status(404).json({ erro: 'Tarefa não encontrada.' });
   }
 
   res.json({ mensagem: 'Tarefa excluída!' });
 });
 
-function carregarCatalogo() {
-  return {
-    agrupamentos: db.prepare('SELECT slug, nome, grupo, dano, explicacao FROM agrupamentos').all(),
-    exercicios: db.prepare(`
-      SELECT e.id, e.nome, e.equipamento, e.genero, e.enfase, e.observacao, a.slug AS agrupamento
-      FROM exercicios e
-      JOIN agrupamentos a ON a.id = e.agrupamento_id
-    `).all(),
-  };
+async function carregarCatalogo() {
+  const { rows: agrupamentos } = await pool.query(
+    'SELECT slug, nome, grupo, dano, explicacao FROM agrupamentos'
+  );
+  const { rows: exercicios } = await pool.query(`
+    SELECT e.id, e.nome, e.equipamento, e.genero, e.enfase, e.observacao, a.slug AS agrupamento
+    FROM exercicios e
+    JOIN agrupamentos a ON a.id = e.agrupamento_id
+  `);
+
+  return { agrupamentos, exercicios };
 }
 
-function montarFicha(treinoId, usuarioId) {
-  const treino = db.prepare(
-    'SELECT * FROM treinos WHERE id = ? AND usuario_id = ?'
-  ).get(treinoId, usuarioId);
+async function montarFicha(treinoId, usuarioId) {
+  const { rows: treinoRows } = await pool.query(
+    'SELECT * FROM treinos WHERE id = $1 AND usuario_id = $2',
+    [treinoId, usuarioId]
+  );
+  const treino = treinoRows[0];
 
   if (!treino) return null;
 
-  const sessoes = db.prepare(
-    'SELECT * FROM treino_sessoes WHERE treino_id = ? ORDER BY ordem'
-  ).all(treino.id);
+  const { rows: sessoes } = await pool.query(
+    'SELECT * FROM treino_sessoes WHERE treino_id = $1 ORDER BY ordem',
+    [treino.id]
+  );
 
-  const exercicios = db.prepare(`
-    SELECT te.id AS treino_exercicio_id, te.sessao_id, te.ordem, te.series, te.reps, te.rir,
-           e.id AS exercicio_id, e.nome, e.equipamento, e.enfase, e.observacao,
-           a.slug AS agrupamento, a.nome AS agrupamento_nome, a.grupo, a.explicacao
-    FROM treino_exercicios te
-    JOIN exercicios e ON e.id = te.exercicio_id
-    JOIN agrupamentos a ON a.id = e.agrupamento_id
-    WHERE te.sessao_id = ?
-    ORDER BY te.ordem
-  `);
+  const sessoesComExercicios = await Promise.all(sessoes.map(async (s) => {
+    const { rows: exercicios } = await pool.query(`
+      SELECT te.id AS treino_exercicio_id, te.sessao_id, te.ordem, te.series, te.reps, te.rir,
+             e.id AS exercicio_id, e.nome, e.equipamento, e.enfase, e.observacao,
+             a.slug AS agrupamento, a.nome AS agrupamento_nome, a.grupo, a.explicacao
+      FROM treino_exercicios te
+      JOIN exercicios e ON e.id = te.exercicio_id
+      JOIN agrupamentos a ON a.id = e.agrupamento_id
+      WHERE te.sessao_id = $1
+      ORDER BY te.ordem
+    `, [s.id]);
 
-  return {
-    ...treino,
-    sessoes: sessoes.map((s) => ({ ...s, exercicios: exercicios.all(s.id) })),
-  };
+    return { ...s, exercicios };
+  }));
+
+  return { ...treino, sessoes: sessoesComExercicios };
 }
 
-app.get('/exercicios', verificarToken, (req, res) => {
-  const catalogo = carregarCatalogo();
+app.get('/exercicios', verificarToken, async (req, res) => {
+  const catalogo = await carregarCatalogo();
   res.json(catalogo);
 });
 
-app.post('/treinos', verificarToken, (req, res) => {
+app.post('/treinos', verificarToken, async (req, res) => {
   const { nivel, genero, dias, nome } = req.body;
 
   let gerado;
   try {
-    gerado = gerarTreino({ nivel, genero, dias: Number(dias) }, carregarCatalogo());
+    gerado = gerarTreino({ nivel, genero, dias: Number(dias) }, await carregarCatalogo());
   } catch (erro) {
     return res.status(400).json({ erro: erro.message });
   }
 
-  const inserirTreino = db.prepare(`
-    INSERT INTO treinos (usuario_id, nome, nivel, genero, divisao)
-    VALUES (?, ?, ?, ?, ?)
-  `);
-  const inserirSessao = db.prepare(
-    'INSERT INTO treino_sessoes (treino_id, nome, ordem) VALUES (?, ?, ?)'
-  );
-  const inserirExercicio = db.prepare(`
-    INSERT INTO treino_exercicios (sessao_id, exercicio_id, ordem, series, reps, rir)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `);
+  const client = await pool.connect();
+  let treinoId;
 
-  const salvar = db.transaction(() => {
-    const treino = inserirTreino.run(
-      req.usuario.id,
-      nome || `${gerado.nomeDivisao} — ${dias} dias`,
-      nivel,
-      genero,
-      gerado.divisao
+  try {
+    await client.query('BEGIN');
+
+    const { rows: treinoRows } = await client.query(
+      `INSERT INTO treinos (usuario_id, nome, nivel, genero, divisao)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [req.usuario.id, nome || `${gerado.nomeDivisao} — ${dias} dias`, nivel, genero, gerado.divisao]
     );
+    treinoId = treinoRows[0].id;
 
     for (const sessao of gerado.sessoes) {
-      const salva = inserirSessao.run(treino.lastInsertRowid, sessao.nome, sessao.ordem);
+      const { rows: sessaoRows } = await client.query(
+        'INSERT INTO treino_sessoes (treino_id, nome, ordem) VALUES ($1, $2, $3) RETURNING id',
+        [treinoId, sessao.nome, sessao.ordem]
+      );
+      const sessaoId = sessaoRows[0].id;
 
       for (const e of sessao.exercicios) {
-        inserirExercicio.run(salva.lastInsertRowid, e.exercicio_id, e.ordem, e.series, e.reps, e.rir);
+        await client.query(
+          `INSERT INTO treino_exercicios (sessao_id, exercicio_id, ordem, series, reps, rir)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [sessaoId, e.exercicio_id, e.ordem, e.series, e.reps, e.rir]
+        );
       }
     }
 
-    return treino.lastInsertRowid;
-  });
+    await client.query('COMMIT');
+  } catch (erro) {
+    await client.query('ROLLBACK');
+    throw erro;
+  } finally {
+    client.release();
+  }
 
-  const id = salvar();
-
-  res.status(201).json({ mensagem: 'Treino gerado!', treino: montarFicha(id, req.usuario.id) });
+  res.status(201).json({ mensagem: 'Treino gerado!', treino: await montarFicha(treinoId, req.usuario.id) });
 });
 
-app.get('/treinos', verificarToken, (req, res) => {
-  const treinos = db.prepare(`
+app.get('/treinos', verificarToken, async (req, res) => {
+  const { rows: treinos } = await pool.query(`
     SELECT t.*, COUNT(s.id) AS sessoes
     FROM treinos t LEFT JOIN treino_sessoes s ON s.treino_id = t.id
-    WHERE t.usuario_id = ?
+    WHERE t.usuario_id = $1
     GROUP BY t.id
     ORDER BY t.id DESC
-  `).all(req.usuario.id);
+  `, [req.usuario.id]);
 
   res.json({ treinos });
 });
 
-app.get('/treinos/:id', verificarToken, (req, res) => {
-  const ficha = montarFicha(req.params.id, req.usuario.id);
+app.get('/treinos/:id', verificarToken, async (req, res) => {
+  const ficha = await montarFicha(req.params.id, req.usuario.id);
 
   if (!ficha) {
     return res.status(404).json({ erro: 'Treino não encontrado.' });
@@ -369,36 +405,39 @@ app.get('/treinos/:id', verificarToken, (req, res) => {
   res.json({ treino: ficha });
 });
 
-app.delete('/treinos/:id', verificarToken, (req, res) => {
-  const resultado = db.prepare(
-    'DELETE FROM treinos WHERE id = ? AND usuario_id = ?'
-  ).run(req.params.id, req.usuario.id);
+app.delete('/treinos/:id', verificarToken, async (req, res) => {
+  const resultado = await pool.query(
+    'DELETE FROM treinos WHERE id = $1 AND usuario_id = $2',
+    [req.params.id, req.usuario.id]
+  );
 
-  if (resultado.changes === 0) {
+  if (resultado.rowCount === 0) {
     return res.status(404).json({ erro: 'Treino não encontrado.' });
   }
 
   res.json({ mensagem: 'Treino excluído!' });
 });
 
-function buscarTreinoExercicio(treinoExercicioId, usuarioId) {
-  return db.prepare(`
+async function buscarTreinoExercicio(treinoExercicioId, usuarioId) {
+  const { rows } = await pool.query(`
     SELECT te.id, te.exercicio_id
     FROM treino_exercicios te
     JOIN treino_sessoes s ON s.id = te.sessao_id
     JOIN treinos t ON t.id = s.treino_id
-    WHERE te.id = ? AND t.usuario_id = ?
-  `).get(treinoExercicioId, usuarioId);
+    WHERE te.id = $1 AND t.usuario_id = $2
+  `, [treinoExercicioId, usuarioId]);
+
+  return rows[0] || null;
 }
 
-app.post('/treino-exercicios/:id/registros', verificarToken, (req, res) => {
+app.post('/treino-exercicios/:id/registros', verificarToken, async (req, res) => {
   const { registros } = req.body;
 
   if (!Array.isArray(registros) || registros.length === 0) {
     return res.status(400).json({ erro: 'Informe ao menos uma série.' });
   }
 
-  const treinoExercicio = buscarTreinoExercicio(req.params.id, req.usuario.id);
+  const treinoExercicio = await buscarTreinoExercicio(req.params.id, req.usuario.id);
 
   if (!treinoExercicio) {
     return res.status(404).json({ erro: 'Exercício não encontrado.' });
@@ -414,66 +453,73 @@ app.post('/treino-exercicios/:id/registros', verificarToken, (req, res) => {
     }
   }
 
-  const inserir = db.prepare(`
-    INSERT INTO registros_series (usuario_id, treino_exercicio_id, numero_serie, carga, repeticoes)
-    VALUES (?, ?, ?, ?, ?)
-  `);
+  const client = await pool.connect();
 
-  const salvarTodos = db.transaction((lista) => {
-    for (const r of lista) {
-      inserir.run(req.usuario.id, treinoExercicio.id, r.numeroSerie, r.carga, r.repeticoes);
+  try {
+    await client.query('BEGIN');
+
+    for (const r of registros) {
+      await client.query(
+        `INSERT INTO registros_series (usuario_id, treino_exercicio_id, numero_serie, carga, repeticoes)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [req.usuario.id, treinoExercicio.id, r.numeroSerie, r.carga, r.repeticoes]
+      );
     }
-  });
 
-  salvarTodos(registros);
+    await client.query('COMMIT');
+  } catch (erro) {
+    await client.query('ROLLBACK');
+    throw erro;
+  } finally {
+    client.release();
+  }
 
   res.status(201).json({ mensagem: 'Registro salvo!' });
 });
 
-app.get('/evolucao/sessoes', verificarToken, (req, res) => {
-  const sessoes = db.prepare(`
-    SELECT s.id, s.nome, t.nome AS treino_nome, t.criadoEm AS treino_criadoEm
+app.get('/evolucao/sessoes', verificarToken, async (req, res) => {
+  const { rows: sessoes } = await pool.query(`
+    SELECT s.id, s.nome, t.nome AS treino_nome, t."criadoEm" AS treino_criadoEm
     FROM treino_sessoes s
     JOIN treinos t ON t.id = s.treino_id
-    WHERE t.usuario_id = ?
+    WHERE t.usuario_id = $1
     ORDER BY t.id DESC, s.ordem
-  `).all(req.usuario.id);
+  `, [req.usuario.id]);
 
   res.json({ sessoes });
 });
 
-app.get('/evolucao/sessoes/:id', verificarToken, (req, res) => {
-  const sessao = db.prepare(`
+app.get('/evolucao/sessoes/:id', verificarToken, async (req, res) => {
+  const { rows: sessaoRows } = await pool.query(`
     SELECT s.id
     FROM treino_sessoes s
     JOIN treinos t ON t.id = s.treino_id
-    WHERE s.id = ? AND t.usuario_id = ?
-  `).get(req.params.id, req.usuario.id);
+    WHERE s.id = $1 AND t.usuario_id = $2
+  `, [req.params.id, req.usuario.id]);
+  const sessao = sessaoRows[0];
 
   if (!sessao) {
     return res.status(404).json({ erro: 'Sessão não encontrada.' });
   }
 
-  const exerciciosDaSessao = db.prepare(`
+  const { rows: exerciciosDaSessao } = await pool.query(`
     SELECT DISTINCT e.id, e.nome, te.ordem
     FROM treino_exercicios te
     JOIN exercicios e ON e.id = te.exercicio_id
-    WHERE te.sessao_id = ?
+    WHERE te.sessao_id = $1
     ORDER BY te.ordem
-  `).all(sessao.id);
+  `, [sessao.id]);
 
-  const buscarRegistros = db.prepare(`
-    SELECT r.registradoEm, r.carga, r.repeticoes
-    FROM registros_series r
-    JOIN treino_exercicios te ON te.id = r.treino_exercicio_id
-    WHERE te.exercicio_id = ? AND r.usuario_id = ?
-    ORDER BY r.registradoEm
-  `);
+  const exercicios = await Promise.all(exerciciosDaSessao.map(async (e) => {
+    const { rows: registros } = await pool.query(`
+      SELECT r."registradoEm", r.carga, r.repeticoes
+      FROM registros_series r
+      JOIN treino_exercicios te ON te.id = r.treino_exercicio_id
+      WHERE te.exercicio_id = $1 AND r.usuario_id = $2
+      ORDER BY r."registradoEm"
+    `, [e.id, req.usuario.id]);
 
-  const exercicios = exerciciosDaSessao.map((e) => ({
-    id: e.id,
-    nome: e.nome,
-    registros: buscarRegistros.all(e.id, req.usuario.id),
+    return { id: e.id, nome: e.nome, registros };
   }));
 
   res.json({ exercicios });
@@ -483,21 +529,24 @@ function metaAguaMl(pesoKg) {
   return Math.round((pesoKg || 70) * 35);
 }
 
-app.get('/agua/hoje', verificarToken, (req, res) => {
-  const usuario = db.prepare(
-    'SELECT pesoKg, lembreteAguaAtivo, lembreteAguaIntervaloMin FROM usuarios WHERE id = ?'
-  ).get(req.usuario.id);
+app.get('/agua/hoje', verificarToken, async (req, res) => {
+  const { rows: usuarioRows } = await pool.query(
+    'SELECT "pesoKg", "lembreteAguaAtivo", "lembreteAguaIntervaloMin" FROM usuarios WHERE id = $1',
+    [req.usuario.id]
+  );
+  const usuario = usuarioRows[0];
 
-  const registros = db.prepare(`
-    SELECT id, ml, registradoEm
+  const { rows: registros } = await pool.query(`
+    SELECT id, ml, "registradoEm"
     FROM registros_agua
-    WHERE usuario_id = ? AND date(registradoEm) = date('now', 'localtime')
-    ORDER BY registradoEm DESC
-  `).all(req.usuario.id);
+    WHERE usuario_id = $1 AND ("registradoEm" AT TIME ZONE '${FUSO}')::date = ${HOJE_LOCAL}
+    ORDER BY "registradoEm" DESC
+  `, [req.usuario.id]);
 
-  const garrafinhas = db.prepare(
-    'SELECT id, nome, ml FROM garrafinhas WHERE usuario_id = ? ORDER BY ml'
-  ).all(req.usuario.id);
+  const { rows: garrafinhas } = await pool.query(
+    'SELECT id, nome, ml FROM garrafinhas WHERE usuario_id = $1 ORDER BY ml',
+    [req.usuario.id]
+  );
 
   const totalMl = registros.reduce((soma, r) => soma + r.ml, 0);
 
@@ -512,71 +561,75 @@ app.get('/agua/hoje', verificarToken, (req, res) => {
   });
 });
 
-app.get('/agua/historico', verificarToken, (req, res) => {
-  const dias = db.prepare(`
-    SELECT date(registradoEm) AS dia, SUM(ml) AS totalMl, COUNT(*) AS quantidade
+app.get('/agua/historico', verificarToken, async (req, res) => {
+  const { rows: dias } = await pool.query(`
+    SELECT ("registradoEm" AT TIME ZONE '${FUSO}')::date AS dia, SUM(ml) AS "totalMl", COUNT(*) AS quantidade
     FROM registros_agua
-    WHERE usuario_id = ? AND registradoEm >= datetime('now', 'localtime', '-13 days', 'start of day')
+    WHERE usuario_id = $1 AND "registradoEm" >= (${HOJE_LOCAL} - interval '13 days') AT TIME ZONE '${FUSO}'
     GROUP BY dia
     ORDER BY dia DESC
-  `).all(req.usuario.id);
+  `, [req.usuario.id]);
 
   res.json({ dias });
 });
 
-app.post('/agua/registros', verificarToken, (req, res) => {
+app.post('/agua/registros', verificarToken, async (req, res) => {
   const { ml } = req.body;
 
   if (!Number.isFinite(ml) || ml <= 0) {
     return res.status(400).json({ erro: 'Informe uma quantidade válida.' });
   }
 
-  const resultado = db.prepare(
-    'INSERT INTO registros_agua (usuario_id, ml) VALUES (?, ?)'
-  ).run(req.usuario.id, Math.round(ml));
+  const { rows } = await pool.query(
+    'INSERT INTO registros_agua (usuario_id, ml) VALUES ($1, $2) RETURNING id',
+    [req.usuario.id, Math.round(ml)]
+  );
 
-  res.status(201).json({ mensagem: 'Registrado!', id: resultado.lastInsertRowid });
+  res.status(201).json({ mensagem: 'Registrado!', id: rows[0].id });
 });
 
-app.delete('/agua/registros/:id', verificarToken, (req, res) => {
-  const resultado = db.prepare(
-    'DELETE FROM registros_agua WHERE id = ? AND usuario_id = ?'
-  ).run(req.params.id, req.usuario.id);
+app.delete('/agua/registros/:id', verificarToken, async (req, res) => {
+  const resultado = await pool.query(
+    'DELETE FROM registros_agua WHERE id = $1 AND usuario_id = $2',
+    [req.params.id, req.usuario.id]
+  );
 
-  if (resultado.changes === 0) {
+  if (resultado.rowCount === 0) {
     return res.status(404).json({ erro: 'Registro não encontrado.' });
   }
 
   res.json({ mensagem: 'Removido!' });
 });
 
-app.post('/agua/garrafinhas', verificarToken, (req, res) => {
+app.post('/agua/garrafinhas', verificarToken, async (req, res) => {
   const { nome, ml } = req.body;
 
   if (!nome || !Number.isFinite(ml) || ml <= 0) {
     return res.status(400).json({ erro: 'Informe nome e quantidade válidos.' });
   }
 
-  const resultado = db.prepare(
-    'INSERT INTO garrafinhas (usuario_id, nome, ml) VALUES (?, ?, ?)'
-  ).run(req.usuario.id, nome, Math.round(ml));
+  const { rows } = await pool.query(
+    'INSERT INTO garrafinhas (usuario_id, nome, ml) VALUES ($1, $2, $3) RETURNING id',
+    [req.usuario.id, nome, Math.round(ml)]
+  );
 
-  res.status(201).json({ mensagem: 'Garrafinha cadastrada!', id: resultado.lastInsertRowid });
+  res.status(201).json({ mensagem: 'Garrafinha cadastrada!', id: rows[0].id });
 });
 
-app.delete('/agua/garrafinhas/:id', verificarToken, (req, res) => {
-  const resultado = db.prepare(
-    'DELETE FROM garrafinhas WHERE id = ? AND usuario_id = ?'
-  ).run(req.params.id, req.usuario.id);
+app.delete('/agua/garrafinhas/:id', verificarToken, async (req, res) => {
+  const resultado = await pool.query(
+    'DELETE FROM garrafinhas WHERE id = $1 AND usuario_id = $2',
+    [req.params.id, req.usuario.id]
+  );
 
-  if (resultado.changes === 0) {
+  if (resultado.rowCount === 0) {
     return res.status(404).json({ erro: 'Garrafinha não encontrada.' });
   }
 
   res.json({ mensagem: 'Removida!' });
 });
 
-app.put('/agua/configuracao', verificarToken, (req, res) => {
+app.put('/agua/configuracao', verificarToken, async (req, res) => {
   const { pesoKg, lembreteAtivo, lembreteIntervaloMin } = req.body;
 
   if (pesoKg != null && (!Number.isFinite(pesoKg) || pesoKg <= 0)) {
@@ -587,18 +640,18 @@ app.put('/agua/configuracao', verificarToken, (req, res) => {
     return res.status(400).json({ erro: 'Intervalo do lembrete inválido.' });
   }
 
-  db.prepare(`
+  await pool.query(`
     UPDATE usuarios
-    SET pesoKg = COALESCE(?, pesoKg),
-        lembreteAguaAtivo = COALESCE(?, lembreteAguaAtivo),
-        lembreteAguaIntervaloMin = COALESCE(?, lembreteAguaIntervaloMin)
-    WHERE id = ?
-  `).run(
+    SET "pesoKg" = COALESCE($1, "pesoKg"),
+        "lembreteAguaAtivo" = COALESCE($2, "lembreteAguaAtivo"),
+        "lembreteAguaIntervaloMin" = COALESCE($3, "lembreteAguaIntervaloMin")
+    WHERE id = $4
+  `, [
     pesoKg ?? null,
     lembreteAtivo === undefined ? null : (lembreteAtivo ? 1 : 0),
     lembreteIntervaloMin ?? null,
-    req.usuario.id
-  );
+    req.usuario.id,
+  ]);
 
   res.json({ mensagem: 'Configuração salva!' });
 });
@@ -607,27 +660,26 @@ app.get('/push/chave-publica', verificarToken, (req, res) => {
   res.json({ chave: process.env.VAPID_PUBLIC_KEY || null });
 });
 
-app.post('/push/inscrever', verificarToken, (req, res) => {
+app.post('/push/inscrever', verificarToken, async (req, res) => {
   const { endpoint, keys } = req.body;
 
   if (!endpoint || !keys || !keys.p256dh || !keys.auth) {
     return res.status(400).json({ erro: 'Inscrição de notificação inválida.' });
   }
 
-  db.prepare(`
+  await pool.query(`
     INSERT INTO inscricoes_push (usuario_id, endpoint, p256dh, auth)
-    VALUES (?, ?, ?, ?)
-    ON CONFLICT(endpoint) DO UPDATE SET usuario_id = excluded.usuario_id, p256dh = excluded.p256dh, auth = excluded.auth
-  `).run(req.usuario.id, endpoint, keys.p256dh, keys.auth);
+    VALUES ($1, $2, $3, $4)
+    ON CONFLICT (endpoint) DO UPDATE SET usuario_id = excluded.usuario_id, p256dh = excluded.p256dh, auth = excluded.auth
+  `, [req.usuario.id, endpoint, keys.p256dh, keys.auth]);
 
   res.status(201).json({ mensagem: 'Inscrito para notificações!' });
 });
 
-app.delete('/push/inscrever', verificarToken, (req, res) => {
+app.delete('/push/inscrever', verificarToken, async (req, res) => {
   const { endpoint } = req.body;
 
-  db.prepare('DELETE FROM inscricoes_push WHERE endpoint = ? AND usuario_id = ?')
-    .run(endpoint, req.usuario.id);
+  await pool.query('DELETE FROM inscricoes_push WHERE endpoint = $1 AND usuario_id = $2', [endpoint, req.usuario.id]);
 
   res.json({ mensagem: 'Inscrição removida.' });
 });
@@ -635,31 +687,33 @@ app.delete('/push/inscrever', verificarToken, (req, res) => {
 async function checarLembretesDeAgua() {
   if (!process.env.VAPID_PUBLIC_KEY) return;
 
-  const horaLocal = Number(new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', hour12: false }).format(new Date()));
+  const horaLocal = Number(new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', hour12: false, timeZone: FUSO }).format(new Date()));
   if (horaLocal < 7 || horaLocal >= 22) return;
 
-  const usuarios = db.prepare(`
-    SELECT id, pesoKg, lembreteAguaIntervaloMin
+  const { rows: usuarios } = await pool.query(`
+    SELECT id, "pesoKg", "lembreteAguaIntervaloMin"
     FROM usuarios
-    WHERE lembreteAguaAtivo = 1
-  `).all();
+    WHERE "lembreteAguaAtivo" = 1
+  `);
 
   for (const usuario of usuarios) {
-    const totalHoje = db.prepare(`
+    const { rows: totalRows } = await pool.query(`
       SELECT COALESCE(SUM(ml), 0) AS total
       FROM registros_agua
-      WHERE usuario_id = ? AND date(registradoEm) = date('now', 'localtime')
-    `).get(usuario.id).total;
+      WHERE usuario_id = $1 AND ("registradoEm" AT TIME ZONE '${FUSO}')::date = ${HOJE_LOCAL}
+    `, [usuario.id]);
+    const totalHoje = Number(totalRows[0].total);
 
     if (totalHoje >= metaAguaMl(usuario.pesoKg)) continue;
 
-    const inscricoes = db.prepare(
-      'SELECT * FROM inscricoes_push WHERE usuario_id = ?'
-    ).all(usuario.id);
+    const { rows: inscricoes } = await pool.query(
+      'SELECT * FROM inscricoes_push WHERE usuario_id = $1',
+      [usuario.id]
+    );
 
     for (const inscricao of inscricoes) {
       if (inscricao.ultimoLembreteEm) {
-        const minutosDesde = (Date.now() - new Date(inscricao.ultimoLembreteEm + 'Z').getTime()) / 60000;
+        const minutosDesde = (Date.now() - new Date(inscricao.ultimoLembreteEm).getTime()) / 60000;
         if (minutosDesde < usuario.lembreteAguaIntervaloMin) continue;
       }
 
@@ -673,11 +727,10 @@ async function checarLembretesDeAgua() {
           { endpoint: inscricao.endpoint, keys: { p256dh: inscricao.p256dh, auth: inscricao.auth } },
           payload
         );
-        db.prepare('UPDATE inscricoes_push SET ultimoLembreteEm = datetime(\'now\', \'localtime\') WHERE id = ?')
-          .run(inscricao.id);
+        await pool.query('UPDATE inscricoes_push SET "ultimoLembreteEm" = now() WHERE id = $1', [inscricao.id]);
       } catch (erro) {
         if (erro.statusCode === 404 || erro.statusCode === 410) {
-          db.prepare('DELETE FROM inscricoes_push WHERE id = ?').run(inscricao.id);
+          await pool.query('DELETE FROM inscricoes_push WHERE id = $1', [inscricao.id]);
         } else {
           console.error('Erro ao enviar notificação:', erro.message);
         }
@@ -688,15 +741,15 @@ async function checarLembretesDeAgua() {
 
 setInterval(checarLembretesDeAgua, 10 * 60 * 1000);
 
-app.post('/forgot-password', async (req, res) => {
+app.post('/forgot-password', limitadorLogin, async (req, res) => {
   const { email } = req.body;
 
   if (!email) {
     return res.status(400).json({ erro: 'Informe o e-mail.' });
   }
 
-  const stmt = db.prepare('SELECT * FROM usuarios WHERE email = ?');
-  const usuario = stmt.get(email);
+  const { rows } = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);
+  const usuario = rows[0];
 
   if (!usuario) {
     return res.json({ mensagem: 'Se esse e-mail existir, enviaremos as instruções.' });
@@ -705,11 +758,13 @@ app.post('/forgot-password', async (req, res) => {
   const token = crypto.randomBytes(32).toString('hex');
   const expira = Date.now() + 30 * 60 * 1000;
 
-  const update = db.prepare('UPDATE usuarios SET resetToken = ?, resetTokenExpira = ? WHERE email = ?');
-  update.run(token, expira, email);
+  await pool.query('UPDATE usuarios SET "resetToken" = $1, "resetTokenExpira" = $2 WHERE email = $3', [token, expira, email]);
 
   const baseUrl = process.env.APP_URL || `http://localhost:${PORT}`;
   const link = `${baseUrl}/redefinir-senha.html?token=${token}`;
+  const nomeSeguro = String(usuario.nome).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
 
   try {
     await transporter.sendMail({
@@ -717,7 +772,7 @@ app.post('/forgot-password', async (req, res) => {
       to: email,
       subject: 'Redefinição de senha',
       html: `
-        <p>Olá, ${usuario.nome}!</p>
+        <p>Olá, ${nomeSeguro}!</p>
         <p>Você solicitou a redefinição da sua senha. Clique no link abaixo (válido por 30 minutos):</p>
         <a href="${link}">${link}</a>
         <p>Se você não solicitou isso, apenas ignore este e-mail.</p>
@@ -739,25 +794,36 @@ app.post('/reset-password', async (req, res) => {
     return res.status(400).json({ erro: 'Token e nova senha são obrigatórios.' });
   }
 
-  const stmt = db.prepare('SELECT * FROM usuarios WHERE resetToken = ?');
-  const usuario = stmt.get(token);
+  const { rows } = await pool.query('SELECT * FROM usuarios WHERE "resetToken" = $1', [token]);
+  const usuario = rows[0];
 
   if (!usuario) {
     return res.status(400).json({ erro: 'Token inválido.' });
   }
 
-  if (Date.now() > usuario.resetTokenExpira) {
+  if (Date.now() > Number(usuario.resetTokenExpira)) {
     return res.status(400).json({ erro: 'Token expirado. Solicite novamente.' });
   }
 
   const senhaCriptografada = await bcrypt.hash(novaSenha, 10);
 
-  const update = db.prepare('UPDATE usuarios SET senha = ?, resetToken = NULL, resetTokenExpira = NULL WHERE id = ?');
-  update.run(senhaCriptografada, usuario.id);
+  await pool.query('UPDATE usuarios SET senha = $1, "resetToken" = NULL, "resetTokenExpira" = NULL WHERE id = $2', [senhaCriptografada, usuario.id]);
 
   res.json({ mensagem: 'Senha redefinida com sucesso!' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
+app.use((erro, req, res, next) => {
+  console.error('Erro não tratado:', erro);
+  res.status(500).json({ erro: 'Erro interno do servidor.' });
 });
+
+inicializarBanco()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Servidor rodando em http://localhost:${PORT}`);
+    });
+  })
+  .catch((erro) => {
+    console.error('Erro ao inicializar o banco de dados:', erro);
+    process.exit(1);
+  });
