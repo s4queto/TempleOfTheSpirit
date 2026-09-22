@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet' integrity="sha384-42kyIPf7HDYLkGffmxDhSx/3Z/53wGBs3nD6wEFxsbeDc7rMO6mkYbkAcpRsnMU2" crossorigin="anonymous">
     <title>Meus treinos</title>
     <link rel="stylesheet" href="app.css">
     <script type="importmap">
@@ -395,9 +395,15 @@
             const avatar = document.getElementById('avatar');
             const botaoRemover = document.getElementById('botaoRemoverFoto');
 
-            avatar.innerHTML = foto
-                ? `<img src="${foto}" alt="Foto de perfil">`
-                : `<i class='bx bxs-user'></i>`;
+            if (foto) {
+                avatar.innerHTML = '';
+                const img = document.createElement('img');
+                img.src = foto;
+                img.alt = 'Foto de perfil';
+                avatar.appendChild(img);
+            } else {
+                avatar.innerHTML = `<i class='bx bxs-user'></i>`;
+            }
             botaoRemover.style.display = foto ? 'inline-block' : 'none';
         }
 
@@ -565,7 +571,7 @@
                         <span>${s.exercicios.length} exercícios</span>
                     </header>
                     <div class="boneco-wrap">
-                        <div class="boneco" data-slugs="${[...new Set(s.exercicios.map((e) => e.agrupamento))].join(',')}"></div>
+                        <div class="boneco" data-slugs="${escapar([...new Set(s.exercicios.map((e) => e.agrupamento))].join(','))}"></div>
                         <p class="boneco-legenda">Músculos trabalhados nesta sessão</p>
                     </div>
                     <div class="tabela-wrap">
