@@ -42,8 +42,9 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-      'script-src': ["'self'", "'unsafe-inline'"],
+      'script-src': ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
       'script-src-attr': ["'unsafe-inline'"],
+      'img-src': ["'self'", 'data:', 'https://images.unsplash.com'],
     },
   },
 }));
