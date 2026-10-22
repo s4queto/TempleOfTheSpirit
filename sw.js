@@ -10,7 +10,7 @@ self.addEventListener('push', (evento) => {
     evento.waitUntil(
         self.registration.showNotification(dados.titulo, {
             body: dados.corpo,
-            icon: 'img/image.png',
+            icon: 'img/icon-192.png',
             badge: 'img/image.png',
         })
     );
