@@ -15,6 +15,7 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const webpush = require('web-push');
 const { gerarTreino } = require('./gerador');
+const { IDIOMAS, idiomaValido, traduzirRespostas, textosLembreteAgua, textosEmailRedefinicao } = require('./mensagens');
 
 if (!process.env.JWT_SECRET) {
   console.error('ERRO: JWT_SECRET não definido. Copie backend/.env.example para backend/.env e preencha os valores.');
@@ -81,6 +82,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+app.use(traduzirRespostas);
 app.use(express.json({ limit: '3mb' }));
 app.use(express.static(path.join(__dirname, '..')));
 
@@ -130,6 +132,7 @@ const HOJE_LOCAL = `(now() AT TIME ZONE '${FUSO}')::date`;
 
 app.post('/register', limitadorLogin, async (req, res) => {
   const { nome, email, senha } = req.body;
+  const idioma = idiomaValido(req.body.idioma);
 
   if (!nome || !email || !senha) {
     return res.status(400).json({ erro: 'Preencha todos os campos.' });
@@ -142,7 +145,7 @@ app.post('/register', limitadorLogin, async (req, res) => {
   try {
     const senhaCriptografada = await bcrypt.hash(senha, 10);
 
-    await pool.query('INSERT INTO usuarios (nome, email, senha) VALUES ($1, $2, $3)', [nome, email, senhaCriptografada]);
+    await pool.query('INSERT INTO usuarios (nome, email, senha, idioma) VALUES ($1, $2, $3, $4)', [nome, email, senhaCriptografada, idioma]);
 
     res.json({ mensagem: 'Usuário cadastrado com sucesso!' });
 
@@ -178,11 +181,11 @@ app.post('/login', limitadorLogin, async (req, res) => {
     { expiresIn: '2h' }
   );
 
-  res.json({ mensagem: 'Login realizado com sucesso!', nome: usuario.nome, token });
+  res.json({ mensagem: 'Login realizado com sucesso!', nome: usuario.nome, idioma: usuario.idioma, token });
 });
 
 app.get('/perfil', verificarToken, async (req, res) => {
-  const { rows } = await pool.query('SELECT id, nome, email, foto FROM usuarios WHERE id = $1', [req.usuario.id]);
+  const { rows } = await pool.query('SELECT id, nome, email, foto, idioma FROM usuarios WHERE id = $1', [req.usuario.id]);
   const usuario = rows[0];
 
   if (!usuario) {
@@ -208,6 +211,18 @@ app.delete('/perfil/foto', verificarToken, async (req, res) => {
   await pool.query('UPDATE usuarios SET foto = NULL WHERE id = $1', [req.usuario.id]);
 
   res.json({ mensagem: 'Foto removida!' });
+});
+
+app.put('/perfil/idioma', verificarToken, async (req, res) => {
+  const { idioma } = req.body;
+
+  if (!IDIOMAS.includes(idioma)) {
+    return res.status(400).json({ erro: 'Idioma inválido.' });
+  }
+
+  await pool.query('UPDATE usuarios SET idioma = $1 WHERE id = $2', [idioma, req.usuario.id]);
+
+  res.json({ mensagem: 'Idioma atualizado!' });
 });
 
 app.put('/perfil', verificarToken, async (req, res) => {
@@ -722,7 +737,7 @@ async function checarLembretesDeAgua() {
   if (horaLocal < 7 || horaLocal >= 22) return;
 
   const { rows: usuarios } = await pool.query(`
-    SELECT id, "pesoKg", "lembreteAguaIntervaloMin"
+    SELECT id, "pesoKg", "lembreteAguaIntervaloMin", idioma
     FROM usuarios
     WHERE "lembreteAguaAtivo" = 1
   `);
@@ -748,10 +763,9 @@ async function checarLembretesDeAgua() {
         if (minutosDesde < usuario.lembreteAguaIntervaloMin) continue;
       }
 
-      const payload = JSON.stringify({
-        titulo: 'Hora de beber água 💧',
-        corpo: `Você já bebeu ${totalHoje}ml hoje. Faltam ${metaAguaMl(usuario.pesoKg) - totalHoje}ml para a meta.`,
-      });
+      const payload = JSON.stringify(
+        textosLembreteAgua(usuario.idioma, totalHoje, metaAguaMl(usuario.pesoKg) - totalHoje)
+      );
 
       try {
         await webpush.sendNotification(
@@ -808,17 +822,14 @@ app.post('/forgot-password', limitadorLogin, async (req, res) => {
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   }[c]));
 
+  const textosEmail = textosEmailRedefinicao(usuario.idioma, nomeSeguro, link);
+
   try {
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
-      subject: 'Redefinição de senha',
-      html: `
-        <p>Olá, ${nomeSeguro}!</p>
-        <p>Você solicitou a redefinição da sua senha. Clique no link abaixo (válido por 30 minutos):</p>
-        <a href="${link}">${link}</a>
-        <p>Se você não solicitou isso, apenas ignore este e-mail.</p>
-      `,
+      subject: textosEmail.assunto,
+      html: textosEmail.html,
     });
 
     res.json({ mensagem: 'Se esse e-mail existir, enviaremos as instruções.' });

@@ -9,6 +9,7 @@
     <link rel="icon" href="favicon.ico" sizes="any">
     <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png">
     <link rel="stylesheet" href="style.css">
+    <script src="i18n.js"></script>
 </head>
 <body>
     <main class="container" id="conteudo" style="display: none;">
@@ -16,43 +17,43 @@
         <nav class="topo">
             <span id="saudacao"></span>
             <span>
-                <a href="home.html">Tarefas</a>
-                <a href="#" onclick="sair()">Sair</a>
+                <a href="home.html" data-i18n="geral.tarefas">Tarefas</a>
+                <a href="#" onclick="sair()" data-i18n="geral.sair">Sair</a>
             </span>
         </nav>
 
-        <h1>Meu perfil</h1>
+        <h1 data-i18n="perfil.titulo">Meu perfil</h1>
 
         <form onsubmit="return false;">
             <div class="input-box">
-                <input placeholder="Nome" type="text" id="nome">
+                <input placeholder="Nome" data-i18n-placeholder="geral.nome" type="text" id="nome">
                 <i class="bx bxs-user"></i>
             </div>
 
             <div class="input-box">
-                <input placeholder="E-mail" type="email" id="email">
+                <input placeholder="E-mail" data-i18n-placeholder="geral.email" type="email" id="email">
                 <i class="bx bxs-envelope"></i>
             </div>
 
-            <button type="submit" class="login" onclick="salvarPerfil()" style="margin-top: 0;">Salvar alterações</button>
+            <button type="submit" class="login" onclick="salvarPerfil()" style="margin-top: 0;" data-i18n="geral.salvarAlteracoes">Salvar alterações</button>
         </form>
 
         <hr style="margin: 30px 0; border: none; border-top: 1px solid rgba(255, 255, 255, .2);">
 
-        <h1 style="font-size: 22px;">Alterar senha</h1>
+        <h1 style="font-size: 22px;" data-i18n="geral.alterarSenha">Alterar senha</h1>
 
         <form onsubmit="return false;">
             <div class="input-box">
-                <input placeholder="Senha atual" type="password" id="senhaAtual">
+                <input placeholder="Senha atual" data-i18n-placeholder="geral.senhaAtual" type="password" id="senhaAtual">
                 <i class="bx bxs-lock-alt"></i>
             </div>
 
             <div class="input-box">
-                <input placeholder="Nova senha" type="password" id="novaSenha">
+                <input placeholder="Nova senha" data-i18n-placeholder="geral.novaSenha" type="password" id="novaSenha">
                 <i class="bx bxs-lock-alt"></i>
             </div>
 
-            <button type="submit" class="login" onclick="alterarSenha()" style="margin-top: 0;">Alterar senha</button>
+            <button type="submit" class="login" onclick="alterarSenha()" style="margin-top: 0;" data-i18n="geral.alterarSenha">Alterar senha</button>
         </form>
 
         <p id="mensagem" style="text-align: center; margin-top: 20px;"></p>
@@ -66,14 +67,15 @@
                 if (!resposta) return;
 
                 const dados = await resposta.json();
+                if (dados.usuario.idioma !== idiomaAtual()) definirIdioma(dados.usuario.idioma);
 
-                document.getElementById('saudacao').textContent = `Olá, ${dados.usuario.nome}!`;
+                document.getElementById('saudacao').textContent = t('geral.ola', { nome: dados.usuario.nome });
                 document.getElementById('nome').value = dados.usuario.nome;
                 document.getElementById('email').value = dados.usuario.email;
                 document.getElementById('conteudo').style.display = 'block';
 
             } catch (erro) {
-                alert('Erro ao conectar com o servidor.');
+                alert(t('geral.erroServidor'));
             }
         }
 
@@ -83,7 +85,7 @@
             const mensagem = document.getElementById('mensagem');
 
             if (!nome || !email) {
-                mensagem.textContent = 'Preencha nome e e-mail.';
+                mensagem.textContent = t('perfil.preenchaNomeEmail');
                 return;
             }
 
@@ -100,7 +102,7 @@
                 return;
             }
 
-            document.getElementById('saudacao').textContent = `Olá, ${dados.usuario.nome}!`;
+            document.getElementById('saudacao').textContent = t('geral.ola', { nome: dados.usuario.nome });
             mensagem.textContent = dados.mensagem;
         }
 
@@ -110,7 +112,7 @@
             const mensagem = document.getElementById('mensagem');
 
             if (!senhaAtual || !novaSenha) {
-                mensagem.textContent = 'Informe a senha atual e a nova senha.';
+                mensagem.textContent = t('perfil.informeSenhas');
                 return;
             }
 

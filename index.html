@@ -9,34 +9,35 @@
     <link rel="icon" href="favicon.ico" sizes="any">
     <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png">
     <link rel="stylesheet" href="style.css">
+    <script src="i18n.js"></script>
 </head>
 <body>
     <main class="container">
         <form onsubmit="return false;">
-            <h1>Login</h1>
+            <h1 data-i18n="login.titulo">Login</h1>
             <div class="input-box">
-                <input placeholder="Usuário" type="email" id="email">
+                <input placeholder="Usuário" data-i18n-placeholder="login.usuario" type="email" id="email">
                 <i class="bx bxs-user"></i>
             </div>
             <div class="input-box">
-                <input placeholder="Senha" type="password" id="senha">
+                <input placeholder="Senha" data-i18n-placeholder="geral.senha" type="password" id="senha">
                 <i class="bx bxs-lock-alt"></i>
             </div>
 
             <div class="remember-forgot">
                 <label>
                 <input type="checkbox">
-                Lembrar senha
+                <span data-i18n="login.lembrar">Lembrar senha</span>
                 </label>
-                <a href="#" onclick="esqueciSenha()">Esqueci a senha</a>
+                <a href="#" onclick="esqueciSenha()" data-i18n="login.esqueci">Esqueci a senha</a>
             </div>
 
              <p id="mensagem" style="text-align: center; margin-top: 30px;"></p>
 
-            <button type="submit" class="login" onclick="fazerLogin()">Login</button>
+            <button type="submit" class="login" onclick="fazerLogin()" data-i18n="login.botao">Login</button>
 
             <div class="register-link">
-                <p>Não tem uma conta? <a href="cadastro.html">Cadastre-se</a></p>
+                <p><span data-i18n="login.semConta">Não tem uma conta?</span> <a href="cadastro.html" data-i18n="login.cadastreSe">Cadastre-se</a></p>
             </div>
 
         </form>
@@ -50,14 +51,14 @@
             const mensagem = document.getElementById('mensagem');
 
             if (!email || !senha) {
-                mensagem.textContent = 'Preencha e-mail e senha.';
+                mensagem.textContent = t('login.preencha');
                 return;
             }
 
             try {
                 const resposta = await fetch('/login', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'X-Idioma': idiomaAtual() },
                     body: JSON.stringify({ email, senha })
                 });
 
@@ -69,25 +70,26 @@
                 }
 
                 localStorage.setItem('token', dados.token);
+                if (dados.idioma) definirIdioma(dados.idioma);
 
-                mensagem.textContent = `Bem-vindo, ${dados.nome}!`;
+                mensagem.textContent = t('login.bemVindo', { nome: dados.nome });
 
                 window.location.href = 'app.html';
 
             } catch (erro) {
-                mensagem.textContent = 'Erro ao conectar com o servidor.';
+                mensagem.textContent = t('geral.erroServidor');
             }
         }
 
         async function esqueciSenha() {
-            const email = prompt('Digite seu e-mail cadastrado:');
+            const email = prompt(t('login.digiteEmail'));
 
             if (!email) return;
 
             try {
                 const resposta = await fetch('/forgot-password', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'X-Idioma': idiomaAtual() },
                     body: JSON.stringify({ email })
                 });
 
@@ -95,7 +97,7 @@
                 alert(dados.mensagem);
 
             } catch (erro) {
-                alert('Erro ao conectar com o servidor.');
+                alert(t('geral.erroServidor'));
             }
         }
     </script>

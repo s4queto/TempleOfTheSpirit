@@ -28,7 +28,8 @@ async function inicializarBanco() {
         foto TEXT,
         "pesoKg" REAL,
         "lembreteAguaAtivo" INTEGER NOT NULL DEFAULT 0,
-        "lembreteAguaIntervaloMin" INTEGER NOT NULL DEFAULT 120
+        "lembreteAguaIntervaloMin" INTEGER NOT NULL DEFAULT 120,
+        idioma TEXT NOT NULL DEFAULT 'pt'
       )
     `);
 
@@ -37,6 +38,7 @@ async function inicializarBanco() {
       pesoKg: 'REAL',
       lembreteAguaAtivo: 'INTEGER NOT NULL DEFAULT 0',
       lembreteAguaIntervaloMin: 'INTEGER NOT NULL DEFAULT 120',
+      idioma: "TEXT NOT NULL DEFAULT 'pt'",
     };
     for (const [coluna, tipo] of Object.entries(colunasNovasUsuarios)) {
       if (!(await colunaExiste(client, 'usuarios', coluna))) {

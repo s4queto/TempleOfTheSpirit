@@ -9,66 +9,78 @@
     <link rel="icon" href="favicon.ico" sizes="any">
     <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png">
     <link rel="stylesheet" href="style.css">
+    <script src="i18n.js"></script>
 </head>
 <body>
     <main class="container">
         <form onsubmit="return false;">
-            <h1>Cadastro</h1>
+            <h1 data-i18n="cadastro.titulo">Cadastro</h1>
 
             <div class="input-box">
-                <input placeholder="Nome" type="text" id="nome">
+                <input placeholder="Nome" data-i18n-placeholder="geral.nome" type="text" id="nome">
                 <i class="bx bxs-user"></i>
             </div>
 
             <div class="input-box">
-                <input placeholder="E-mail" type="email" id="email">
+                <input placeholder="E-mail" data-i18n-placeholder="geral.email" type="email" id="email">
                 <i class="bx bxs-envelope"></i>
             </div>
 
             <div class="input-box">
-                <input placeholder="Senha" type="password" id="senha">
+                <input placeholder="Senha" data-i18n-placeholder="geral.senha" type="password" id="senha">
                 <i class="bx bxs-lock-alt"></i>
             </div>
 
             <div class="input-box">
-                <input placeholder="Confirmar senha" type="password" id="confirmarSenha">
+                <input placeholder="Confirmar senha" data-i18n-placeholder="cadastro.confirmarSenha" type="password" id="confirmarSenha">
                 <i class="bx bxs-lock-alt"></i>
+            </div>
+
+            <div class="input-box">
+                <select id="idioma" aria-label="Idioma" onchange="definirIdioma(this.value)">
+                    <option value="pt">Português</option>
+                    <option value="en">English</option>
+                </select>
+                <i class="bx bx-globe"></i>
             </div>
 
             <p id="mensagem" style="text-align: center; margin-top: 15px;"></p>
 
-            <button type="submit" class="login" onclick="cadastrar()">Cadastrar</button>
+            <button type="submit" class="login" onclick="cadastrar()" data-i18n="cadastro.botao">Cadastrar</button>
 
             <div class="register-link">
-                <p>Já tem uma conta? <a href="index.html">Faça login</a></p>
+                <p><span data-i18n="cadastro.jaTemConta">Já tem uma conta?</span> <a href="index.html" data-i18n="cadastro.facaLogin">Faça login</a></p>
             </div>
 
         </form>
     </main>
 
     <script>
+        document.getElementById('idioma').value = idiomaAtual();
+
         async function cadastrar() {
             const nome = document.getElementById('nome').value;
             const email = document.getElementById('email').value;
             const senha = document.getElementById('senha').value;
             const confirmarSenha = document.getElementById('confirmarSenha').value;
+            const idioma = document.getElementById('idioma').value;
             const mensagem = document.getElementById('mensagem');
 
             if (!nome || !email || !senha || !confirmarSenha) {
-                mensagem.textContent = 'Preencha todos os campos.';
+                mensagem.textContent = t('cadastro.preencha');
                 return;
             }
 
             if (senha !== confirmarSenha) {
-                mensagem.textContent = 'As senhas não coincidem.';
+                mensagem.textContent = t('geral.senhasNaoCoincidem');
                 return;
             }
 
             try {
                 const resposta = await fetch('/register', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nome, email, senha })
+                    headers: { 'Content-Type': 'application/json', 'X-Idioma': idioma },
+                    body: JSON.stringify({ nome, email, senha, idioma })
                 });
 
                 const dados = await resposta.json();
@@ -78,14 +90,14 @@
                     return;
                 }
 
-                mensagem.textContent = 'Cadastro realizado! Redirecionando...';
+                mensagem.textContent = t('cadastro.sucesso');
 
                 setTimeout(() => {
                     window.location.href = 'index.html';
                 }, 2000);
 
             } catch (erro) {
-                mensagem.textContent = 'Erro ao conectar com o servidor.';
+                mensagem.textContent = t('geral.erroServidor');
             }
         }
     </script>

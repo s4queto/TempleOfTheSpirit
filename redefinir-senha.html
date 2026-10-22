@@ -9,28 +9,29 @@
     <link rel="icon" href="favicon.ico" sizes="any">
     <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png">
     <link rel="stylesheet" href="style.css">
+    <script src="i18n.js"></script>
 </head>
 <body>
     <main class="container">
         <form onsubmit="return false;">
-            <h1>Nova Senha</h1>
+            <h1 data-i18n="redefinir.titulo">Nova Senha</h1>
 
             <div class="input-box">
-                <input placeholder="Nova senha" type="password" id="novaSenha">
+                <input placeholder="Nova senha" data-i18n-placeholder="geral.novaSenha" type="password" id="novaSenha">
                 <i class="bx bxs-lock-alt"></i>
             </div>
 
             <div class="input-box">
-                <input placeholder="Confirmar nova senha" type="password" id="confirmarSenha">
+                <input placeholder="Confirmar nova senha" data-i18n-placeholder="redefinir.confirmar" type="password" id="confirmarSenha">
                 <i class="bx bxs-lock-alt"></i>
             </div>
 
             <p id="mensagem" style="text-align: center; margin-top: -10px;"></p>
 
-            <button type="submit" class="login" onclick="redefinirSenha()">Salvar nova senha</button>
+            <button type="submit" class="login" onclick="redefinirSenha()" data-i18n="redefinir.botao">Salvar nova senha</button>
 
             <div class="register-link">
-                <p><a href="index.html">Voltar para o login</a></p>
+                <p><a href="index.html" data-i18n="redefinir.voltar">Voltar para o login</a></p>
             </div>
 
         </form>
@@ -46,24 +47,24 @@
             const mensagem = document.getElementById('mensagem');
 
             if (!novaSenha || !confirmarSenha) {
-                mensagem.textContent = 'Preencha os dois campos.';
+                mensagem.textContent = t('redefinir.preencha');
                 return;
             }
 
             if (novaSenha !== confirmarSenha) {
-                mensagem.textContent = 'As senhas não coincidem.';
+                mensagem.textContent = t('geral.senhasNaoCoincidem');
                 return;
             }
 
             if (!token) {
-                mensagem.textContent = 'Link inválido ou incompleto.';
+                mensagem.textContent = t('redefinir.linkInvalido');
                 return;
             }
 
             try {
                 const resposta = await fetch('/reset-password', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'X-Idioma': idiomaAtual() },
                     body: JSON.stringify({ token, novaSenha })
                 });
 
@@ -74,14 +75,14 @@
                     return;
                 }
 
-                mensagem.textContent = dados.mensagem + ' Redirecionando...';
+                mensagem.textContent = dados.mensagem + ' ' + t('geral.redirecionando');
 
                 setTimeout(() => {
                     window.location.href = 'index.html';
                 }, 2000);
 
             } catch (erro) {
-                mensagem.textContent = 'Erro ao conectar com o servidor.';
+                mensagem.textContent = t('geral.erroServidor');
             }
         }
     </script>

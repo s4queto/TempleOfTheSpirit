@@ -9,6 +9,7 @@
     <link rel="icon" href="favicon.ico" sizes="any">
     <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png">
     <link rel="stylesheet" href="style.css">
+    <script src="i18n.js"></script>
 </head>
 <body>
     <main class="container container-largo" id="conteudo" style="display: none;">
@@ -16,25 +17,25 @@
         <nav class="topo">
             <span id="saudacao"></span>
             <span>
-                <a href="perfil.html">Perfil</a>
-                <a href="#" onclick="sair()">Sair</a>
+                <a href="perfil.html" data-i18n="geral.perfil">Perfil</a>
+                <a href="#" onclick="sair()" data-i18n="geral.sair">Sair</a>
             </span>
         </nav>
 
-        <h1>Minhas tarefas</h1>
+        <h1 data-i18n="tarefas.titulo">Minhas tarefas</h1>
 
         <form onsubmit="return false;">
             <div class="input-box">
-                <input placeholder="Nova tarefa" type="text" id="titulo" maxlength="100">
+                <input placeholder="Nova tarefa" data-i18n-placeholder="tarefas.nova" type="text" id="titulo" maxlength="100">
                 <i class="bx bxs-edit"></i>
             </div>
 
             <div class="input-box">
-                <input placeholder="Descrição (opcional)" type="text" id="descricao" maxlength="200">
+                <input placeholder="Descrição (opcional)" data-i18n-placeholder="tarefas.descricao" type="text" id="descricao" maxlength="200">
                 <i class="bx bxs-notepad"></i>
             </div>
 
-            <button type="submit" class="login" onclick="criarTarefa()" style="margin-top: 0;">Adicionar</button>
+            <button type="submit" class="login" onclick="criarTarefa()" style="margin-top: 0;" data-i18n="geral.adicionar">Adicionar</button>
         </form>
 
         <p id="mensagem" style="text-align: center; margin-top: 15px;"></p>
@@ -52,13 +53,15 @@
                 if (!resposta) return;
 
                 const dados = await resposta.json();
-                document.getElementById('saudacao').textContent = `Olá, ${dados.usuario.nome}!`;
+                if (dados.usuario.idioma !== idiomaAtual()) definirIdioma(dados.usuario.idioma);
+
+                document.getElementById('saudacao').textContent = t('geral.ola', { nome: dados.usuario.nome });
                 document.getElementById('conteudo').style.display = 'block';
 
                 await carregarTarefas();
 
             } catch (erro) {
-                alert('Erro ao conectar com o servidor.');
+                alert(t('geral.erroServidor'));
             }
         }
 
@@ -70,26 +73,26 @@
             const lista = document.getElementById('lista');
 
             if (tarefas.length === 0) {
-                lista.innerHTML = '<li class="vazio">Nenhuma tarefa ainda. Adicione a primeira!</li>';
+                lista.innerHTML = `<li class="vazio">${t('tarefas.vazio')}</li>`;
                 document.getElementById('contador').textContent = '';
                 return;
             }
 
-            lista.innerHTML = tarefas.map(t => `
-                <li class="${t.concluida ? 'concluida' : ''}">
-                    <input type="checkbox" ${t.concluida ? 'checked' : ''}
-                           onchange="alternar(${t.id}, this.checked)">
+            lista.innerHTML = tarefas.map(tarefa => `
+                <li class="${tarefa.concluida ? 'concluida' : ''}">
+                    <input type="checkbox" ${tarefa.concluida ? 'checked' : ''}
+                           onchange="alternar(${tarefa.id}, this.checked)">
                     <div class="texto">
-                        <strong>${escapar(t.titulo)}</strong>
-                        ${t.descricao ? `<small>${escapar(t.descricao)}</small>` : ''}
+                        <strong>${escapar(tarefa.titulo)}</strong>
+                        ${tarefa.descricao ? `<small>${escapar(tarefa.descricao)}</small>` : ''}
                     </div>
-                    <i class="bx bx-trash" onclick="excluir(${t.id})" title="Excluir"></i>
+                    <i class="bx bx-trash" onclick="excluir(${tarefa.id})" title="${t('geral.excluir')}"></i>
                 </li>
             `).join('');
 
-            const pendentes = tarefas.filter(t => !t.concluida).length;
+            const pendentes = tarefas.filter(tarefa => !tarefa.concluida).length;
             document.getElementById('contador').textContent =
-                `${pendentes} pendente(s) de ${tarefas.length}`;
+                t('tarefas.contador', { pendentes, total: tarefas.length });
         }
 
         async function criarTarefa() {
@@ -98,7 +101,7 @@
             const mensagem = document.getElementById('mensagem');
 
             if (!titulo) {
-                mensagem.textContent = 'Informe o título da tarefa.';
+                mensagem.textContent = t('tarefas.informeTitulo');
                 return;
             }
 
@@ -127,7 +130,7 @@
             if (!resposta) return;
 
             const { tarefas } = await resposta.json();
-            const tarefa = tarefas.find(t => t.id === id);
+            const tarefa = tarefas.find(item => item.id === id);
             if (!tarefa) return;
 
             await chamarApi(`/tarefas/${id}`, {
@@ -143,7 +146,7 @@
         }
 
         async function excluir(id) {
-            if (!confirm('Excluir esta tarefa?')) return;
+            if (!confirm(t('tarefas.confirmarExcluir'))) return;
 
             const resposta = await chamarApi(`/tarefas/${id}`, { method: 'DELETE' });
             if (!resposta) return;

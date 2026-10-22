@@ -9,6 +9,7 @@
     <link rel="icon" href="favicon.ico" sizes="any">
     <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png">
     <link rel="stylesheet" href="app.css">
+    <script src="i18n.js"></script>
     <script type="importmap">
         {
             "imports": {
@@ -22,31 +23,31 @@
 <body style="display: none;">
 
     <aside class="menu">
-        <h1><i class='bx bxs-dumbbell'></i> Treinos</h1>
+        <h1><i class='bx bxs-dumbbell'></i> <span data-i18n="app.menuTitulo">Treinos</span></h1>
 
         <nav>
-            <a data-secao="perfil"><i class='bx bxs-user'></i> Meu perfil</a>
-            <a data-secao="treinos" class="ativo"><i class='bx bxs-notepad'></i> Meus treinos</a>
-            <a data-secao="novo"><i class='bx bxs-plus-circle'></i> Novo treino</a>
-            <a data-secao="evolucao"><i class='bx bxs-chart'></i> Evolução</a>
-            <a data-secao="agua"><i class='bx bxs-droplet'></i> Água</a>
-            <a data-secao="info"><i class='bx bxs-info-circle'></i> Mais informações</a>
+            <a data-secao="perfil"><i class='bx bxs-user'></i> <span data-i18n="app.menuPerfil">Meu perfil</span></a>
+            <a data-secao="treinos" class="ativo"><i class='bx bxs-notepad'></i> <span data-i18n="app.menuTreinos">Meus treinos</span></a>
+            <a data-secao="novo"><i class='bx bxs-plus-circle'></i> <span data-i18n="app.menuNovo">Novo treino</span></a>
+            <a data-secao="evolucao"><i class='bx bxs-chart'></i> <span data-i18n="app.menuEvolucao">Evolução</span></a>
+            <a data-secao="agua"><i class='bx bxs-droplet'></i> <span data-i18n="app.menuAgua">Água</span></a>
+            <a data-secao="info"><i class='bx bxs-info-circle'></i> <span data-i18n="app.menuInfo">Mais informações</span></a>
         </nav>
 
         <div class="rodape">
-            <a onclick="sair()"><i class='bx bx-log-out'></i> Sair da conta</a>
+            <a onclick="sair()"><i class='bx bx-log-out'></i> <span data-i18n="app.sairConta">Sair da conta</span></a>
         </div>
     </aside>
 
     <main class="conteudo">
 
         <section class="secao" id="secao-perfil">
-            <h2 class="titulo">Meu perfil</h2>
-            <p class="subtitulo">Seus dados de acesso.</p>
+            <h2 class="titulo" data-i18n="perfil.titulo">Meu perfil</h2>
+            <p class="subtitulo" data-i18n="perfil.subtitulo">Seus dados de acesso.</p>
 
             <div class="card">
-                <h3>Foto de perfil</h3>
-                <p class="desc">Aparece só se você colocar uma. Sem foto, fica o ícone padrão.</p>
+                <h3 data-i18n="perfil.foto">Foto de perfil</h3>
+                <p class="desc" data-i18n="perfil.fotoDesc">Aparece só se você colocar uma. Sem foto, fica o ícone padrão.</p>
 
                 <div class="foto-perfil-area">
                     <div class="avatar" id="avatar">
@@ -54,103 +55,116 @@
                     </div>
                     <div>
                         <input type="file" id="inputFoto" accept="image/*" style="display: none;" onchange="selecionarFoto(event)">
-                        <button class="botao secundario botao-pequeno" onclick="document.getElementById('inputFoto').click()">Escolher foto</button>
-                        <button class="botao perigo" id="botaoRemoverFoto" onclick="removerFoto()" style="display: none;">Remover</button>
+                        <button class="botao secundario botao-pequeno" onclick="document.getElementById('inputFoto').click()" data-i18n="perfil.escolherFoto">Escolher foto</button>
+                        <button class="botao perigo" id="botaoRemoverFoto" onclick="removerFoto()" style="display: none;" data-i18n="perfil.remover">Remover</button>
                     </div>
                 </div>
                 <p class="mensagem" id="msgFoto"></p>
             </div>
 
             <div class="card">
-                <h3>Dados pessoais</h3>
-                <p class="desc">Alterar nome ou e-mail da conta.</p>
+                <h3 data-i18n="perfil.dados">Dados pessoais</h3>
+                <p class="desc" data-i18n="perfil.dadosDesc">Alterar nome ou e-mail da conta.</p>
 
                 <div class="campo">
-                    <label for="nome">Nome</label>
+                    <label for="nome" data-i18n="geral.nome">Nome</label>
                     <input type="text" id="nome">
                 </div>
 
                 <div class="campo">
-                    <label for="email">E-mail</label>
+                    <label for="email" data-i18n="geral.email">E-mail</label>
                     <input type="email" id="email">
                 </div>
 
-                <button class="botao" onclick="salvarPerfil()">Salvar alterações</button>
+                <button class="botao" onclick="salvarPerfil()" data-i18n="geral.salvarAlteracoes">Salvar alterações</button>
                 <p class="mensagem" id="msgPerfil"></p>
             </div>
 
             <div class="card">
-                <h3>Alterar senha</h3>
-                <p class="desc">A senha atual é exigida mesmo com você já logado.</p>
+                <h3 data-i18n="geral.idioma">Idioma</h3>
+                <p class="desc" data-i18n="perfil.idiomaDesc">Idioma em que o site aparece para você.</p>
 
                 <div class="campo">
-                    <label for="senhaAtual">Senha atual</label>
+                    <select id="idioma" aria-label="Idioma" onchange="salvarIdioma(this.value)">
+                        <option value="pt">Português</option>
+                        <option value="en">English</option>
+                    </select>
+                </div>
+                <p class="mensagem" id="msgIdioma"></p>
+            </div>
+
+            <div class="card">
+                <h3 data-i18n="geral.alterarSenha">Alterar senha</h3>
+                <p class="desc" data-i18n="perfil.senhaDesc">A senha atual é exigida mesmo com você já logado.</p>
+
+                <div class="campo">
+                    <label for="senhaAtual" data-i18n="geral.senhaAtual">Senha atual</label>
                     <input type="password" id="senhaAtual">
                 </div>
 
                 <div class="campo">
-                    <label for="novaSenha">Nova senha</label>
+                    <label for="novaSenha" data-i18n="geral.novaSenha">Nova senha</label>
                     <input type="password" id="novaSenha">
                 </div>
 
-                <button class="botao" onclick="alterarSenha()">Alterar senha</button>
+                <button class="botao" onclick="alterarSenha()" data-i18n="geral.alterarSenha">Alterar senha</button>
                 <p class="mensagem" id="msgSenha"></p>
             </div>
         </section>
 
         <section class="secao visivel" id="secao-treinos">
-            <h2 class="titulo">Meus treinos</h2>
-            <p class="subtitulo">As fichas que você já gerou.</p>
+            <h2 class="titulo" data-i18n="treinos.titulo">Meus treinos</h2>
+            <p class="subtitulo" data-i18n="treinos.subtitulo">As fichas que você já gerou.</p>
 
             <div id="listaTreinos"></div>
             <div id="fichaAberta"></div>
         </section>
 
         <section class="secao" id="secao-novo">
-            <h2 class="titulo">Novo treino</h2>
-            <p class="subtitulo">Responda três perguntas e a ficha é montada na hora.</p>
+            <h2 class="titulo" data-i18n="novo.titulo">Novo treino</h2>
+            <p class="subtitulo" data-i18n="novo.subtitulo">Responda três perguntas e a ficha é montada na hora.</p>
 
             <div class="card">
-                <h3>Nível</h3>
-                <p class="desc">Define o volume de séries e a faixa de repetições.</p>
+                <h3 data-i18n="novo.nivel">Nível</h3>
+                <p class="desc" data-i18n="novo.nivelDesc">Define o volume de séries e a faixa de repetições.</p>
                 <div class="opcoes" id="opcoesNivel">
-                    <div class="opcao ativa" data-valor="iniciante">Iniciante</div>
-                    <div class="opcao" data-valor="intermediario">Intermediário</div>
-                    <div class="opcao" data-valor="avancado">Avançado</div>
+                    <div class="opcao ativa" data-valor="iniciante" data-i18n="nivel.iniciante">Iniciante</div>
+                    <div class="opcao" data-valor="intermediario" data-i18n="nivel.intermediario">Intermediário</div>
+                    <div class="opcao" data-valor="avancado" data-i18n="nivel.avancado">Avançado</div>
                 </div>
             </div>
 
             <div class="card">
-                <h3>Gênero</h3>
-                <p class="desc">Filtra quais exercícios entram na seleção.</p>
+                <h3 data-i18n="novo.genero">Gênero</h3>
+                <p class="desc" data-i18n="novo.generoDesc">Filtra quais exercícios entram na seleção.</p>
                 <div class="opcoes" id="opcoesGenero">
-                    <div class="opcao ativa" data-valor="masculino">Masculino</div>
-                    <div class="opcao" data-valor="feminino">Feminino</div>
+                    <div class="opcao ativa" data-valor="masculino" data-i18n="genero.masculino">Masculino</div>
+                    <div class="opcao" data-valor="feminino" data-i18n="genero.feminino">Feminino</div>
                 </div>
             </div>
 
             <div class="card">
-                <h3>Dias por semana</h3>
-                <p class="desc">Define a divisão. De 4 dias em diante cada músculo é treinado duas vezes por semana.</p>
+                <h3 data-i18n="novo.dias">Dias por semana</h3>
+                <p class="desc" data-i18n="novo.diasDesc">Define a divisão. De 4 dias em diante cada músculo é treinado duas vezes por semana.</p>
                 <div class="opcoes" id="opcoesDias">
-                    <div class="opcao" data-valor="3">3 dias<small>Push / Pull / Legs</small></div>
-                    <div class="opcao ativa" data-valor="4">4 dias<small>Upper / Lower</small></div>
-                    <div class="opcao" data-valor="5">5 dias<small>PPLUL</small></div>
-                    <div class="opcao" data-valor="6">6 dias<small>PPL x2</small></div>
+                    <div class="opcao" data-valor="3"><span data-i18n="novo.dias3">3 dias</span><small>Push / Pull / Legs</small></div>
+                    <div class="opcao ativa" data-valor="4"><span data-i18n="novo.dias4">4 dias</span><small>Upper / Lower</small></div>
+                    <div class="opcao" data-valor="5"><span data-i18n="novo.dias5">5 dias</span><small>PPLUL</small></div>
+                    <div class="opcao" data-valor="6"><span data-i18n="novo.dias6">6 dias</span><small>PPL x2</small></div>
                 </div>
             </div>
 
-            <button class="botao" onclick="gerarTreino()">Gerar ficha</button>
+            <button class="botao" onclick="gerarTreino()" data-i18n="novo.gerar">Gerar ficha</button>
             <p class="mensagem" id="msgNovo"></p>
         </section>
 
         <section class="secao" id="secao-evolucao">
-            <h2 class="titulo">Evolução</h2>
-            <p class="subtitulo">Acompanhamento de carga ao longo do tempo.</p>
+            <h2 class="titulo" data-i18n="evolucao.titulo">Evolução</h2>
+            <p class="subtitulo" data-i18n="evolucao.subtitulo">Acompanhamento de carga ao longo do tempo.</p>
 
             <div class="card">
-                <h3>Sessão</h3>
-                <p class="desc">Escolha uma sessão para ver a evolução de carga de todos os exercícios dela.</p>
+                <h3 data-i18n="evolucao.sessao">Sessão</h3>
+                <p class="desc" data-i18n="evolucao.sessaoDesc">Escolha uma sessão para ver a evolução de carga de todos os exercícios dela.</p>
                 <div class="campo">
                     <select id="seletorSessao"></select>
                 </div>
@@ -160,12 +174,12 @@
         </section>
 
         <section class="secao" id="secao-agua">
-            <h2 class="titulo">Água</h2>
-            <p class="subtitulo">Acompanhamento de ingestão diária.</p>
+            <h2 class="titulo" data-i18n="agua.titulo">Água</h2>
+            <p class="subtitulo" data-i18n="agua.subtitulo">Acompanhamento de ingestão diária.</p>
 
             <div class="card">
-                <h3>Meta de hoje</h3>
-                <p class="desc">Calculada em 35ml por kg de peso corporal.</p>
+                <h3 data-i18n="agua.meta">Meta de hoje</h3>
+                <p class="desc" data-i18n="agua.metaDesc">Calculada em 35ml por kg de peso corporal.</p>
 
                 <div class="progresso-agua">
                     <div class="progresso-agua-numero">
@@ -179,44 +193,44 @@
                 </div>
 
                 <div class="campo" style="max-width: 160px; margin-top: 16px;">
-                    <label for="aguaPeso">Seu peso (kg)</label>
+                    <label for="aguaPeso" data-i18n="agua.peso">Seu peso (kg)</label>
                     <input type="number" id="aguaPeso" min="1" step="0.5">
                 </div>
-                <button class="botao secundario" onclick="salvarPesoAgua()">Salvar peso</button>
+                <button class="botao secundario" onclick="salvarPesoAgua()" data-i18n="agua.salvarPeso">Salvar peso</button>
                 <p class="mensagem" id="msgAguaPeso"></p>
             </div>
 
             <div class="card">
-                <h3>Registrar consumo</h3>
-                <p class="desc">Toque numa garrafinha cadastrada ou informe a quantidade.</p>
+                <h3 data-i18n="agua.registrar">Registrar consumo</h3>
+                <p class="desc" data-i18n="agua.registrarDesc">Toque numa garrafinha cadastrada ou informe a quantidade.</p>
 
                 <div class="opcoes" id="aguaGarrafinhasBotoes"></div>
 
                 <div class="registro-series" style="margin-top: 16px;">
                     <div class="linha-serie">
-                        <span>Adicionar</span>
+                        <span data-i18n="geral.adicionar">Adicionar</span>
                         <input type="number" id="aguaMlManual" min="1" placeholder="ml">
                     </div>
-                    <button class="botao" onclick="adicionarAguaManual()">Adicionar</button>
+                    <button class="botao" onclick="adicionarAguaManual()" data-i18n="geral.adicionar">Adicionar</button>
                 </div>
 
                 <div id="aguaListaHoje" class="lista-agua-hoje"></div>
             </div>
 
             <div class="card">
-                <h3>Minhas garrafinhas</h3>
-                <p class="desc">Cadastre os tamanhos que você mais usa.</p>
+                <h3 data-i18n="agua.garrafinhas">Minhas garrafinhas</h3>
+                <p class="desc" data-i18n="agua.garrafinhasDesc">Cadastre os tamanhos que você mais usa.</p>
 
                 <div class="registro-series">
                     <div class="linha-serie">
-                        <span>Nome</span>
-                        <input type="text" id="novaGarrafinhaNome" placeholder="Ex: Squeeze">
+                        <span data-i18n="geral.nome">Nome</span>
+                        <input type="text" id="novaGarrafinhaNome" placeholder="Ex: Squeeze" data-i18n-placeholder="agua.exemploNome">
                     </div>
                     <div class="linha-serie">
                         <span>ml</span>
                         <input type="number" id="novaGarrafinhaMl" min="1" placeholder="500">
                     </div>
-                    <button class="botao secundario" onclick="salvarGarrafinha()">Cadastrar</button>
+                    <button class="botao secundario" onclick="salvarGarrafinha()" data-i18n="agua.cadastrar">Cadastrar</button>
                 </div>
 
                 <div id="aguaListaGarrafinhas" class="lista-treinos" style="margin-top: 14px;"></div>
@@ -224,40 +238,40 @@
             </div>
 
             <div class="card">
-                <h3>Lembrete de beber água</h3>
-                <p class="desc">Manda uma notificação enquanto a meta do dia não é batida.</p>
+                <h3 data-i18n="agua.lembrete">Lembrete de beber água</h3>
+                <p class="desc" data-i18n="agua.lembreteDesc">Manda uma notificação enquanto a meta do dia não é batida.</p>
 
                 <div class="campo">
-                    <label for="aguaIntervalo">A cada quantos minutos</label>
+                    <label for="aguaIntervalo" data-i18n="agua.intervalo">A cada quantos minutos</label>
                     <select id="aguaIntervalo">
-                        <option value="60">1 hora</option>
-                        <option value="120" selected>2 horas</option>
-                        <option value="180">3 horas</option>
+                        <option value="60" data-i18n="agua.horas1">1 hora</option>
+                        <option value="120" selected data-i18n="agua.horas2">2 horas</option>
+                        <option value="180" data-i18n="agua.horas3">3 horas</option>
                     </select>
                 </div>
 
-                <button class="botao" id="botaoAtivarLembrete" onclick="alternarLembreteAgua()">Ativar lembretes</button>
+                <button class="botao" id="botaoAtivarLembrete" onclick="alternarLembreteAgua()" data-i18n="agua.ativarLembretes">Ativar lembretes</button>
                 <p class="mensagem" id="msgLembreteAgua"></p>
             </div>
 
             <div class="card">
-                <h3>Últimos dias</h3>
+                <h3 data-i18n="agua.ultimosDias">Últimos dias</h3>
                 <div id="aguaHistorico"></div>
             </div>
         </section>
 
         <section class="secao" id="secao-info">
-            <h2 class="titulo">Mais informações</h2>
-            <p class="subtitulo">Conceitos usados na ficha, explicados.</p>
+            <h2 class="titulo" data-i18n="info.titulo">Mais informações</h2>
+            <p class="subtitulo" data-i18n="info.subtitulo">Conceitos usados na ficha, explicados.</p>
 
             <div class="zigzag">
                 <div class="zigzag-linha" data-reveal>
                     <div class="zigzag-imagem">
-                        <img src="https://images.unsplash.com/photo-1475241404975-c3ae90fdd9e6?w=1400&q=80&auto=format&fit=crop" alt="Xícara de café" loading="lazy">
+                        <img src="https://images.unsplash.com/photo-1475241404975-c3ae90fdd9e6?w=1400&q=80&auto=format&fit=crop" alt="Xícara de café" data-i18n-alt="info.cafeinaAlt" loading="lazy">
                     </div>
                     <div class="zigzag-texto">
-                        <h3>Cafeína pré-treino</h3>
-                        <p>
+                        <h3 data-i18n="info.cafeinaTitulo">Cafeína pré-treino</h3>
+                        <p data-i18n="info.cafeinaTexto">
                             Tomada de 30 a 45 minutos antes de treinar, a cafeína melhora foco e reduz a
                             percepção de esforço, o que ajuda a levar as séries até a faixa de RIR
                             prescrita. Uma dose de referência fica em torno de 3 a 6mg por kg de peso
@@ -270,11 +284,11 @@
 
                 <div class="zigzag-linha" data-reveal>
                     <div class="zigzag-imagem">
-                        <img src="https://images.unsplash.com/photo-1533230091447-15b7f18b6281?w=1400&q=80&auto=format&fit=crop" alt="Copo de água" loading="lazy">
+                        <img src="https://images.unsplash.com/photo-1533230091447-15b7f18b6281?w=1400&q=80&auto=format&fit=crop" alt="Copo de água" data-i18n-alt="info.aguaAlt" loading="lazy">
                     </div>
                     <div class="zigzag-texto">
-                        <h3>Água</h3>
-                        <p>
+                        <h3 data-i18n="info.aguaTitulo">Água</h3>
+                        <p data-i18n="info.aguaTexto">
                             A hidratação afeta força, resistência e recuperação — não é só sobre beber
                             água durante o treino, e sim ao longo do dia inteiro. Desidratação leve já é
                             suficiente para reduzir o desempenho nas últimas séries de uma sessão.
@@ -284,11 +298,11 @@
 
                 <div class="zigzag-linha" data-reveal>
                     <div class="zigzag-imagem">
-                        <img src="https://images.unsplash.com/photo-1543352632-5a4b24e4d2a6?w=1400&q=80&auto=format&fit=crop" alt="Marmitas com comida saudável" loading="lazy">
+                        <img src="https://images.unsplash.com/photo-1543352632-5a4b24e4d2a6?w=1400&q=80&auto=format&fit=crop" alt="Marmitas com comida saudável" data-i18n-alt="info.deficitAlt" loading="lazy">
                     </div>
                     <div class="zigzag-texto">
-                        <h3>Déficit calórico</h3>
-                        <p>
+                        <h3 data-i18n="info.deficitTitulo">Déficit calórico</h3>
+                        <p data-i18n="info.deficitTexto">
                             Perder gordura depende de gastar mais calorias do que se consome — o
                             déficit calórico. Um déficit moderado, em torno de 15% a 20% abaixo da
                             manutenção, costuma preservar mais massa muscular do que cortes
@@ -302,11 +316,11 @@
 
                 <div class="zigzag-linha" data-reveal>
                     <div class="zigzag-imagem">
-                        <img src="https://images.unsplash.com/photo-1772450014666-083b1a23f6a1?w=1400&q=80&auto=format&fit=crop" alt="Levantamento de peso pesado" loading="lazy">
+                        <img src="https://images.unsplash.com/photo-1772450014666-083b1a23f6a1?w=1400&q=80&auto=format&fit=crop" alt="Levantamento de peso pesado" data-i18n-alt="info.rirAlt" loading="lazy">
                     </div>
                     <div class="zigzag-texto">
-                        <h3>RIR — Reps In Reserve</h3>
-                        <p>
+                        <h3 data-i18n="info.rirTitulo">RIR — Reps In Reserve</h3>
+                        <p data-i18n-html="info.rirTexto">
                             RIR é quantas repetições você ainda conseguiria fazer antes de falhar. A
                             ficha usa a faixa <strong>1/0</strong>: terminar a série com 1 repetição de
                             reserva ou levar até a falha técnica. É perto da falha, mas não é sempre a
@@ -318,11 +332,11 @@
 
                 <div class="zigzag-linha" data-reveal>
                     <div class="zigzag-imagem">
-                        <img src="https://images.unsplash.com/photo-1758875570127-b6ff35e42436?w=1400&q=80&auto=format&fit=crop" alt="Movimento explosivo com kettlebell" loading="lazy">
+                        <img src="https://images.unsplash.com/photo-1758875570127-b6ff35e42436?w=1400&q=80&auto=format&fit=crop" alt="Movimento explosivo com kettlebell" data-i18n-alt="info.papAlt" loading="lazy">
                     </div>
                     <div class="zigzag-texto">
-                        <h3>Séries PAP</h3>
-                        <p>
+                        <h3 data-i18n="info.papTitulo">Séries PAP</h3>
+                        <p data-i18n="info.papTexto">
                             PAP (Potenciação Pós-Ativação) é o princípio por trás de fazer uma série
                             bem intensa — perto da falha, com carga alta ou baixa velocidade — pouco
                             antes de outra série do mesmo padrão de movimento. A ativação nervosa da
@@ -333,7 +347,7 @@
                 </div>
             </div>
 
-            <p class="creditos">
+            <p class="creditos" data-i18n-html="info.creditos">
                 Malha 3D do boneco de músculos: projeto
                 <a href="https://www.z-anatomy.com/" target="_blank" rel="noopener">Z-Anatomy</a>,
                 baseado no dataset <a href="https://bodyparts3d.dbcls.jp/" target="_blank" rel="noopener">BodyParts3D</a> (DBCLS),
@@ -385,7 +399,9 @@
             if (!resposta) return;
 
             const { usuario } = await resposta.json();
+            if (usuario.idioma !== idiomaAtual()) definirIdioma(usuario.idioma);
 
+            document.getElementById('idioma').value = idiomaAtual();
             document.getElementById('nome').value = usuario.nome;
             document.getElementById('email').value = usuario.email;
             mostrarAvatar(usuario.foto);
@@ -402,7 +418,7 @@
                 avatar.innerHTML = '';
                 const img = document.createElement('img');
                 img.src = foto;
-                img.alt = 'Foto de perfil';
+                img.alt = t('perfil.fotoAlt');
                 avatar.appendChild(img);
             } else {
                 avatar.innerHTML = `<i class='bx bxs-user'></i>`;
@@ -476,6 +492,27 @@
             msg.className = 'mensagem ' + (resposta.ok ? 'ok' : 'erro');
         }
 
+        async function salvarIdioma(idioma) {
+            const msg = document.getElementById('msgIdioma');
+
+            const resposta = await chamarApi('/perfil/idioma', {
+                method: 'PUT',
+                body: JSON.stringify({ idioma })
+            });
+            if (!resposta) return;
+
+            if (!resposta.ok) {
+                const dados = await resposta.json();
+                msg.textContent = dados.erro;
+                msg.className = 'mensagem erro';
+                return;
+            }
+
+            definirIdioma(idioma);
+            // recarrega para redesenhar também o conteúdo montado via JavaScript
+            window.location.reload();
+        }
+
         async function alterarSenha() {
             const senhaAtual = document.getElementById('senhaAtual').value;
             const novaSenha = document.getElementById('novaSenha').value;
@@ -499,7 +536,7 @@
 
         async function gerarTreino() {
             const msg = document.getElementById('msgNovo');
-            msg.textContent = 'Montando a ficha...';
+            msg.textContent = t('novo.montando');
             msg.className = 'mensagem';
 
             const resposta = await chamarApi('/treinos', {
@@ -529,20 +566,20 @@
             const lista = document.getElementById('listaTreinos');
 
             if (treinos.length === 0) {
-                lista.innerHTML = '<div class="vazio">Nenhuma ficha ainda. Vá em <strong>Novo treino</strong> para gerar a primeira.</div>';
+                lista.innerHTML = `<div class="vazio">${t('treinos.vazio')}</div>`;
                 document.getElementById('fichaAberta').innerHTML = '';
                 return;
             }
 
-            lista.innerHTML = '<div class="lista-treinos">' + treinos.map((t) => `
+            lista.innerHTML = '<div class="lista-treinos">' + treinos.map((treino) => `
                 <div class="item">
                     <div>
-                        <h4>${escapar(t.nome)}</h4>
-                        <p>${escapar(t.nivel)} · ${t.sessoes} sessões · criado em ${escapar(t.criadoEm)}</p>
+                        <h4>${escapar(nomeTreino(treino.nome))}</h4>
+                        <p>${escapar(t('treinos.resumo', { nivel: t('nivel.' + treino.nivel), sessoes: treino.sessoes, data: treino.criadoEm }))}</p>
                     </div>
                     <div class="acoes">
-                        <button class="botao secundario" onclick="abrirFicha(${t.id})">Abrir</button>
-                        <button class="botao perigo" onclick="excluirTreino(${t.id})">Excluir</button>
+                        <button class="botao secundario" onclick="abrirFicha(${treino.id})">${t('treinos.abrir')}</button>
+                        <button class="botao perigo" onclick="excluirTreino(${treino.id})">${t('geral.excluir')}</button>
                     </div>
                 </div>
             `).join('') + '</div>';
@@ -565,28 +602,28 @@
             bonecosAtivos = [];
 
             document.getElementById('fichaAberta').innerHTML = `
-                <h3 style="margin: 30px 0 4px; font-size: 19px;">${escapar(treino.nome)}</h3>
-                <p class="subtitulo">${escapar(treino.nivel)} · ${escapar(treino.genero)}</p>
+                <h3 style="margin: 30px 0 4px; font-size: 19px;">${escapar(nomeTreino(treino.nome))}</h3>
+                <p class="subtitulo">${escapar(t('nivel.' + treino.nivel))} · ${escapar(t('genero.' + treino.genero))}</p>
             ` + treino.sessoes.map((s) => `
                 <div class="sessao">
                     <header>
                         <strong>${escapar(s.nome)}</strong>
-                        <span>${s.exercicios.length} exercícios</span>
+                        <span>${t('treinos.qtdExercicios', { quantidade: s.exercicios.length })}</span>
                     </header>
                     <div class="boneco-wrap">
                         <div class="boneco" data-slugs="${escapar([...new Set(s.exercicios.map((e) => e.agrupamento))].join(','))}"></div>
-                        <p class="boneco-legenda">Músculos trabalhados nesta sessão</p>
+                        <p class="boneco-legenda">${t('treinos.musculosSessao')}</p>
                     </div>
                     <div class="tabela-wrap">
                         <table>
                             <thead>
                                 <tr>
                                     <th></th>
-                                    <th>Exercício</th>
-                                    <th>Séries</th>
-                                    <th>Reps</th>
+                                    <th>${t('treinos.exercicio')}</th>
+                                    <th>${t('treinos.series')}</th>
+                                    <th>${t('treinos.reps')}</th>
                                     <th>RIR</th>
-                                    <th>Observação</th>
+                                    <th>${t('treinos.observacao')}</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -595,21 +632,21 @@
                                     <tr>
                                         <td class="numero">${e.ordem + 1}</td>
                                         <td>
-                                            ${escapar(e.nome)}
-                                            <span class="alvo">${escapar(e.agrupamento_nome)}</span>
+                                            ${escapar(nomeExercicio(e.nome))}
+                                            <span class="alvo">${escapar(nomeAgrupamento(e.agrupamento, e.agrupamento_nome))}</span>
                                         </td>
                                         <td class="prescricao">${e.series}</td>
                                         <td class="prescricao">${escapar(e.reps)}</td>
                                         <td class="prescricao">${escapar(e.rir)}</td>
                                         <td>${escapar(e.observacao || '—')}</td>
-                                        <td><button class="botao secundario botao-pequeno" onclick="toggleRegistro(${e.treino_exercicio_id})">Registrar</button></td>
+                                        <td><button class="botao secundario botao-pequeno" onclick="toggleRegistro(${e.treino_exercicio_id})">${t('treinos.registrar')}</button></td>
                                     </tr>
                                     <tr class="linha-registro" id="registro-${e.treino_exercicio_id}" style="display: none;">
                                         <td colspan="7">
                                             <div class="registro-series" id="registroSeries-${e.treino_exercicio_id}">
                                                 ${camposSeries(e.series)}
                                             </div>
-                                            <button class="botao" onclick="salvarRegistro(${e.treino_exercicio_id})">Salvar série</button>
+                                            <button class="botao" onclick="salvarRegistro(${e.treino_exercicio_id})">${t('treinos.salvarSerie')}</button>
                                             <p class="mensagem" id="msgRegistro-${e.treino_exercicio_id}"></p>
                                         </td>
                                     </tr>
@@ -634,9 +671,9 @@
             for (let i = 1; i <= qtdSeries; i++) {
                 html += `
                     <div class="linha-serie">
-                        <span>Série ${i}</span>
-                        <input type="number" step="0.5" min="0" placeholder="Carga (kg)" data-serie="${i}" data-campo="carga">
-                        <input type="number" step="1" min="0" placeholder="Reps" data-serie="${i}" data-campo="reps">
+                        <span>${t('treinos.serie', { numero: i })}</span>
+                        <input type="number" step="0.5" min="0" placeholder="${t('treinos.carga')}" data-serie="${i}" data-campo="carga">
+                        <input type="number" step="1" min="0" placeholder="${t('treinos.reps')}" data-serie="${i}" data-campo="reps">
                     </div>
                 `;
             }
@@ -663,7 +700,7 @@
             });
 
             if (registros.length === 0) {
-                msg.textContent = 'Preencha ao menos uma série.';
+                msg.textContent = t('treinos.preenchaSerie');
                 msg.className = 'mensagem erro';
                 return;
             }
@@ -689,11 +726,11 @@
 
             if (sessoes.length === 0) {
                 seletor.innerHTML = '';
-                grafico.innerHTML = '<div class="vazio">Nenhuma ficha ainda. Vá em <strong>Novo treino</strong> para gerar a primeira.</div>';
+                grafico.innerHTML = `<div class="vazio">${t('treinos.vazio')}</div>`;
                 return;
             }
 
-            seletor.innerHTML = sessoes.map((s) => `<option value="${s.id}">${escapar(s.nome)} — ${escapar(s.treino_nome)}</option>`).join('');
+            seletor.innerHTML = sessoes.map((s) => `<option value="${s.id}">${escapar(s.nome)} — ${escapar(nomeTreino(s.treino_nome))}</option>`).join('');
             seletor.onchange = () => mostrarEvolucaoSessao(seletor.value);
             mostrarEvolucaoSessao(seletor.value);
         }
@@ -720,13 +757,13 @@
 
                 return `
                     <div class="card">
-                        <h3>${escapar(e.nome)}</h3>
+                        <h3>${escapar(nomeExercicio(e.nome))}</h3>
                         ${pontos.length === 0
-                            ? '<div class="vazio">Sem registros ainda.</div>'
+                            ? `<div class="vazio">${t('evolucao.semRegistros')}</div>`
                             : `
-                                <p class="rotulo-grafico">Carga (kg)</p>
+                                <p class="rotulo-grafico">${t('evolucao.carga')}</p>
                                 ${montarGrafico(pontos, 'carga', 'kg', 'var(--azul)')}
-                                <p class="rotulo-grafico">Repetições</p>
+                                <p class="rotulo-grafico">${t('evolucao.repeticoes')}</p>
                                 ${montarGrafico(pontos, 'repeticoes', '', 'var(--verde)')}
                             `}
                     </div>
@@ -736,7 +773,7 @@
 
         function formatarData(iso) {
             const [, mes, dia] = iso.split('-');
-            return `${dia}/${mes}`;
+            return idiomaAtual() === 'en' ? `${mes}/${dia}` : `${dia}/${mes}`;
         }
 
         function montarGrafico(pontos, campo, sufixo, cor) {
@@ -777,7 +814,7 @@
         }
 
         async function excluirTreino(id) {
-            if (!confirm('Excluir esta ficha?')) return;
+            if (!confirm(t('treinos.confirmarExcluir'))) return;
 
             const resposta = await chamarApi('/treinos/' + id, { method: 'DELETE' });
             if (!resposta) return;
@@ -816,7 +853,7 @@
             document.getElementById('aguaIntervalo').value = aguaCache.lembreteIntervaloMin;
 
             const botao = document.getElementById('botaoAtivarLembrete');
-            botao.textContent = aguaCache.lembreteAtivo ? 'Desativar lembretes' : 'Ativar lembretes';
+            botao.textContent = t(aguaCache.lembreteAtivo ? 'agua.desativarLembretes' : 'agua.ativarLembretes');
             botao.className = aguaCache.lembreteAtivo ? 'botao perigo' : 'botao';
 
             renderizarProgressoAgua();
@@ -835,7 +872,7 @@
 
             const menorGarrafinha = [...garrafinhas].sort((a, b) => a.ml - b.ml)[0];
             document.getElementById('aguaGarrafinhasHoje').textContent = menorGarrafinha
-                ? `≈ ${(totalMl / menorGarrafinha.ml).toFixed(1)} garrafinhas de ${menorGarrafinha.nome} hoje`
+                ? t('agua.garrafinhasHoje', { quantidade: (totalMl / menorGarrafinha.ml).toFixed(1), nome: menorGarrafinha.nome })
                 : '';
         }
 
@@ -844,8 +881,8 @@
             const lista = document.getElementById('aguaListaGarrafinhas');
 
             if (aguaCache.garrafinhas.length === 0) {
-                botoes.innerHTML = '<p class="desc">Nenhuma garrafinha cadastrada ainda.</p>';
-                lista.innerHTML = '<div class="vazio">Cadastre sua primeira garrafinha abaixo.</div>';
+                botoes.innerHTML = `<p class="desc">${t('agua.semGarrafinhas')}</p>`;
+                lista.innerHTML = `<div class="vazio">${t('agua.cadastrePrimeira')}</div>`;
                 return;
             }
 
@@ -860,7 +897,7 @@
                         <p>${g.ml}ml</p>
                     </div>
                     <div class="acoes">
-                        <button class="botao perigo" onclick="removerGarrafinha(${g.id})">Excluir</button>
+                        <button class="botao perigo" onclick="removerGarrafinha(${g.id})">${t('geral.excluir')}</button>
                     </div>
                 </div>
             `).join('');
@@ -870,7 +907,7 @@
             const lista = document.getElementById('aguaListaHoje');
 
             if (aguaCache.registros.length === 0) {
-                lista.innerHTML = '<div class="vazio">Nenhum registro hoje ainda.</div>';
+                lista.innerHTML = `<div class="vazio">${t('agua.semRegistrosHoje')}</div>`;
                 return;
             }
 
@@ -880,7 +917,7 @@
                         <p>${r.ml}ml · ${escapar(r.registradoEm.slice(11, 16))}</p>
                     </div>
                     <div class="acoes">
-                        <button class="botao perigo" onclick="removerRegistroAgua(${r.id})">Excluir</button>
+                        <button class="botao perigo" onclick="removerRegistroAgua(${r.id})">${t('geral.excluir')}</button>
                     </div>
                 </div>
             `).join('');
@@ -914,7 +951,7 @@
             const msg = document.getElementById('msgAguaPeso');
 
             if (!pesoKg || pesoKg <= 0) {
-                msg.textContent = 'Informe um peso válido.';
+                msg.textContent = t('agua.pesoInvalido');
                 msg.className = 'mensagem erro';
                 return;
             }
@@ -971,7 +1008,7 @@
             const diasSemHoje = dias.filter((d) => d.dia !== hoje);
 
             if (diasSemHoje.length === 0) {
-                alvo.innerHTML = '<div class="vazio">Ainda não há histórico de dias anteriores.</div>';
+                alvo.innerHTML = `<div class="vazio">${t('agua.semHistorico')}</div>`;
                 return;
             }
 
@@ -979,7 +1016,7 @@
                 <div class="item">
                     <div>
                         <h4>${formatarData(d.dia)}</h4>
-                        <p>${d.totalMl}ml · ${d.quantidade} registro(s)</p>
+                        <p>${t('agua.registrosDia', { total: d.totalMl, quantidade: d.quantidade })}</p>
                     </div>
                 </div>
             `).join('') + '</div>';
@@ -1003,14 +1040,14 @@
                     await inscricao.unsubscribe();
                 }
                 await chamarApi('/agua/configuracao', { method: 'PUT', body: JSON.stringify({ lembreteAtivo: false }) });
-                msg.textContent = 'Lembretes desativados.';
+                msg.textContent = t('agua.lembretesDesativados');
                 msg.className = 'mensagem';
                 carregarAgua();
                 return;
             }
 
             if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-                msg.textContent = 'Seu navegador não suporta notificações.';
+                msg.textContent = t('agua.semSuporte');
                 msg.className = 'mensagem erro';
                 return;
             }
@@ -1018,7 +1055,7 @@
             try {
                 const permissao = await Notification.requestPermission();
                 if (permissao !== 'granted') {
-                    msg.textContent = 'Permissão de notificação negada.';
+                    msg.textContent = t('agua.permissaoNegada');
                     msg.className = 'mensagem erro';
                     return;
                 }
@@ -1026,7 +1063,7 @@
                 const chaveResposta = await chamarApi('/push/chave-publica');
                 const { chave } = await chaveResposta.json();
                 if (!chave) {
-                    msg.textContent = 'Notificações não configuradas no servidor.';
+                    msg.textContent = t('agua.naoConfigurado');
                     msg.className = 'mensagem erro';
                     return;
                 }
@@ -1045,11 +1082,11 @@
                     body: JSON.stringify({ lembreteAtivo: true, lembreteIntervaloMin: intervaloMin })
                 });
 
-                msg.textContent = 'Lembretes ativados!';
+                msg.textContent = t('agua.lembretesAtivados');
                 msg.className = 'mensagem ok';
                 carregarAgua();
             } catch (erro) {
-                msg.textContent = 'Não deu para ativar as notificações.';
+                msg.textContent = t('agua.erroAtivar');
                 msg.className = 'mensagem erro';
             }
         }

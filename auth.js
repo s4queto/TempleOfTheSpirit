@@ -14,13 +14,14 @@ async function chamarApi(rota, opcoes = {}) {
         headers: {
             ...opcoes.headers,
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'X-Idioma': idiomaAtual()
         }
     });
 
     if (resposta.status === 401) {
         localStorage.removeItem('token');
-        alert('Sua sessão expirou. Faça login novamente.');
+        alert(t('geral.sessaoExpirou'));
         window.location.href = 'index.html';
         return;
     }
