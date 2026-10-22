@@ -1,0 +1,12 @@
+{
+  "installCommand": "npm install --prefix backend",
+  "redirects": [
+    { "source": "/backend/:caminho*", "destination": "/", "permanent": false }
+  ],
+  "rewrites": [
+    {
+      "source": "/:rota(register|login|perfil|alterar-senha|tarefas|exercicios|treinos|treino-exercicios|evolucao|agua|push|forgot-password|reset-password|cron)/:resto*",
+      "destination": "/api"
+    }
+  ]
+}

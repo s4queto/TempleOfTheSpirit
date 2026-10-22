@@ -84,6 +84,28 @@ const transporter = nodemailer.createTransport({
 app.use(express.json({ limit: '3mb' }));
 app.use(express.static(path.join(__dirname, '..')));
 
+// Garante que o banco foi inicializado antes de atender (necessário na Vercel,
+// onde o servidor sobe sob demanda a cada "cold start").
+let bancoPronto = null;
+function garantirBanco() {
+  if (!bancoPronto) {
+    bancoPronto = inicializarBanco().catch((erro) => {
+      bancoPronto = null;
+      throw erro;
+    });
+  }
+  return bancoPronto;
+}
+
+app.use(async (req, res, next) => {
+  try {
+    await garantirBanco();
+    next();
+  } catch (erro) {
+    next(erro);
+  }
+});
+
 function verificarToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -748,7 +770,18 @@ async function checarLembretesDeAgua() {
   }
 }
 
-setInterval(checarLembretesDeAgua, 10 * 60 * 1000);
+// Na Vercel não existe processo rodando o tempo todo, então um serviço externo
+// (ex.: cron-job.org) chama esta rota a cada 10 minutos.
+// Ele precisa enviar o cabeçalho: Authorization: Bearer <CRON_SECRET>
+app.get('/cron/lembretes-agua', async (req, res) => {
+  const segredo = process.env.CRON_SECRET;
+  if (!segredo || req.headers['authorization'] !== `Bearer ${segredo}`) {
+    return res.status(401).json({ erro: 'Não autorizado.' });
+  }
+
+  await checarLembretesDeAgua();
+  res.json({ ok: true });
+});
 
 app.post('/forgot-password', limitadorLogin, async (req, res) => {
   const { email } = req.body;
@@ -826,13 +859,20 @@ app.use((erro, req, res, next) => {
   res.status(500).json({ erro: 'Erro interno do servidor.' });
 });
 
-inicializarBanco()
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`Servidor rodando em http://localhost:${PORT}`);
+// Rodando no seu computador (npm run dev / npm start): sobe o servidor normalmente.
+// Na Vercel, o arquivo é importado por api/index.js e só o app é exportado.
+if (require.main === module) {
+  garantirBanco()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`Servidor rodando em http://localhost:${PORT}`);
+      });
+      setInterval(checarLembretesDeAgua, 10 * 60 * 1000);
+    })
+    .catch((erro) => {
+      console.error('Erro ao inicializar o banco de dados:', erro);
+      process.exit(1);
     });
-  })
-  .catch((erro) => {
-    console.error('Erro ao inicializar o banco de dados:', erro);
-    process.exit(1);
-  });
+}
+
+module.exports = app;
