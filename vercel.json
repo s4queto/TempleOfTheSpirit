@@ -1,7 +1,10 @@
 {
-  "installCommand": "npm install --prefix backend",
   "redirects": [
-    { "source": "/backend/:caminho*", "destination": "/", "permanent": false }
+    {
+      "source": "/backend/:caminho*",
+      "destination": "/",
+      "permanent": false
+    }
   ],
   "rewrites": [
     {
